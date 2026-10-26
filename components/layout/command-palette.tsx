@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import {
   CommandDialog,
@@ -12,7 +12,8 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import { resultsHref } from "@/lib/query";
+import { useRouter } from "@/i18n/navigation";
+import { useFareStore } from "@/hooks/use-fare-store";
 import { siteConfig } from "@/lib/site-config";
 
 type CommandContextValue = {
@@ -24,28 +25,18 @@ const CommandContext = createContext<CommandContextValue | null>(null);
 
 export function useCommandPalette() {
   const value = useContext(CommandContext);
-  if (!value) {
-    throw new Error("useCommandPalette must be used inside CommandPaletteProvider");
-  }
+  if (!value) throw new Error("useCommandPalette must be used inside CommandPaletteProvider");
   return value;
 }
 
-const pages = [
-  { href: "/", label: "Home" },
-  { href: "/plan", label: "Plan a trip" },
-  { href: "/results", label: "Latest results" },
-  { href: "/trips", label: "Saved trips" },
-  { href: "/wallet", label: "Miles and points" },
-  { href: "/hacks", label: "Hack guides" },
-  { href: "/settings", label: "Settings" },
-  { href: "/login", label: "Log in" },
-];
-
-/** ⌘K / Ctrl+K jump menu, mounted once for the whole app. */
+/** Command menu, mounted once inside the locale provider. */
 export function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { setTheme, resolvedTheme } = useTheme();
+  const t = useTranslations("nav");
+  const common = useTranslations("common");
+  const fare = useFareStore();
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -63,60 +54,48 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
     router.push(href);
   };
 
+  const pages = [
+    { href: "/chat", label: common("newChat") },
+    { href: "/trips", label: t("goBoard") },
+    { href: "/earn", label: t("goEarn") },
+    { href: "/wallet", label: common("wallet") },
+    { href: "/pricing", label: common("pricing") },
+    { href: "/hacks", label: common("learn") },
+    { href: "/settings", label: common("settings") },
+    { href: "/login", label: common("login") },
+  ];
+
   return (
     <CommandContext.Provider value={{ open, setOpen }}>
       {children}
-      <CommandDialog
-        open={open}
-        onOpenChange={setOpen}
-        title={`${siteConfig.name} command menu`}
-        description="Jump to a page, start a search, or switch theme."
-      >
-        <CommandInput placeholder="Jump, search, or switch theme…" />
+      <CommandDialog open={open} onOpenChange={setOpen} title={t("commandTitle")} description={t("commandHint")}>
+        <CommandInput placeholder={t("commandHint")} />
         <CommandList>
-          <CommandEmpty>Nothing matches that.</CommandEmpty>
-          <CommandGroup heading="Go">
+          <CommandEmpty>—</CommandEmpty>
+          <CommandGroup heading={siteConfig.name}>
             {pages.map((page) => (
               <CommandItem key={page.href} onSelect={() => go(page.href)}>
                 {page.label}
               </CommandItem>
             ))}
-          </CommandGroup>
-          <CommandSeparator />
-          <CommandGroup heading="Search">
             <CommandItem
-              onSelect={() =>
-                go(
-                  resultsHref({
-                    mode: "quick",
-                    travellers: 1,
-                    cabin: "economy",
-                    flexDays: 3,
-                    legs: [
-                      {
-                        id: "leg-1",
-                        from: "MAD",
-                        to: "LIS",
-                        depart: "2026-11-12",
-                        returnDate: "2026-11-16",
-                      },
-                    ],
-                  }),
-                )
-              }
+              onSelect={() => {
+                fare.setMode(fare.store.mode === "plan" ? "now" : "plan");
+                setOpen(false);
+              }}
             >
-              Madrid to Lisbon, mid November
+              {t("switchMode")}
             </CommandItem>
           </CommandGroup>
           <CommandSeparator />
-          <CommandGroup heading="Theme">
+          <CommandGroup heading={t("toggleTheme")}>
             <CommandItem
               onSelect={() => {
                 setTheme(resolvedTheme === "dark" ? "light" : "dark");
                 setOpen(false);
               }}
             >
-              Toggle theme
+              {t("toggleTheme")}
             </CommandItem>
           </CommandGroup>
         </CommandList>

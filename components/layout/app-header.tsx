@@ -1,26 +1,27 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Search } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Container } from "@/components/layout/container";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useCommandPalette } from "@/components/layout/command-palette";
+import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "cn";
 
-const links = [
-  { href: "/plan", label: "Plan" },
-  { href: "/results", label: "Results" },
-  { href: "/trips", label: "Trips" },
-  { href: "/wallet", label: "Wallet" },
-  { href: "/settings", label: "Settings" },
-];
-
-/** Slim product bar. The mobile way around is the bottom tab bar. */
+/** Slim product bar. The phone way around is the bottom tab bar. */
 export function AppHeader() {
+  const t = useTranslations("common");
   const pathname = usePathname();
   const { setOpen } = useCommandPalette();
+  const links = [
+    { href: "/chat", label: t("chat") },
+    { href: "/trips", label: t("trips") },
+    { href: "/earn", label: t("earn") },
+    { href: "/wallet", label: t("wallet") },
+    { href: "/pricing", label: t("pricing") },
+    { href: "/settings", label: t("settings") },
+  ];
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-paper/85 backdrop-blur-md">
@@ -35,9 +36,8 @@ export function AppHeader() {
                 href={link.href}
                 className={cn(
                   "inline-flex min-h-11 items-center rounded-full px-3 text-sm",
-                  active ? "bg-ink text-paper" : "text-ink-muted hover:text-ink",
+                  active ? "bg-ink text-paper" : "text-ink-muted",
                 )}
-                aria-current={active ? "page" : undefined}
               >
                 {link.label}
               </Link>
@@ -48,14 +48,11 @@ export function AppHeader() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            aria-label="Search"
+            aria-label={t("search")}
             className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-xl border border-line px-3 text-sm text-ink-muted"
           >
             <Search className="size-4 md:hidden" aria-hidden="true" />
-            <span className="hidden md:inline">Search</span>
-            <kbd className="num hidden rounded-md border border-line px-1.5 py-0.5 text-[10px] md:inline">
-              ⌘K
-            </kbd>
+            <span className="hidden md:inline">{t("search")}</span>
           </button>
           <ThemeToggle />
         </div>

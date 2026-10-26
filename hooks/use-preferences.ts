@@ -19,7 +19,7 @@ export const defaultPreferences: Preferences = {
 function parse(raw: string): Preferences {
   if (!raw) return defaultPreferences;
   try {
-    return { ...defaultPreferences, ...(JSON.parse(raw) as Partial<Preferences>) };
+    return { ...defaultPreferences, ...(JSON.parse(raw) as Partial<Preferences>), currency: "EUR" };
   } catch {
     return defaultPreferences;
   }

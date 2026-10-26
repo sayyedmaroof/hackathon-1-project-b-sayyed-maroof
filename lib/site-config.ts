@@ -1,8 +1,8 @@
 export const siteConfig = {
   name: "Fareflip",
-  tagline: "Flip the fare.",
+  tagline: "Dale la vuelta a la tarifa.",
   descriptor:
-    "Smarter routes, points and dates that turn the normal price into a much lower one.",
+    "Un agente que te lleva de cero a un vuelo con puntos: acumular, buscar, mover y reservar.",
   url: "https://fareflip.example",
   links: {
     how: "/#how-it-works",

@@ -110,7 +110,7 @@ export interface HackMeta {
   name: string;
   summary: string;
   why: string;
-  difficulty: "Easy" | "Moderate" | "Careful";
+  difficulty: string;
   typicalSaving: string;
   risk: Risk;
   how: string[];

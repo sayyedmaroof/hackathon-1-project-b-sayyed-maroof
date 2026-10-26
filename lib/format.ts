@@ -1,42 +1,20 @@
 import type { CurrencyCode } from "@/lib/types";
 
-/**
- * Sample display rates against EUR. Canonical prices stay in euros.
- * SAMPLE RATES — not live FX.
- */
-export const SAMPLE_RATES: Record<CurrencyCode, number> = {
-  EUR: 1,
-  GBP: 0.86,
-  USD: 1.08,
-};
-
-const formatters: Record<CurrencyCode, Intl.NumberFormat> = {
-  EUR: new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }),
-  GBP: new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "GBP",
-    maximumFractionDigits: 0,
-  }),
-  USD: new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }),
-};
+const euro = new Intl.NumberFormat("es-ES", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
 
 /** Intl can emit different spaces in Node and the browser. One space keeps SSR stable. */
 function stable(formatted: string) {
   return formatted.replace(/[\u00A0\u202F\u2007\u2009]/g, " ");
 }
 
-/** Format a euro amount in the selected display currency. */
-export function formatMoney(eur: number, currency: CurrencyCode = "EUR") {
-  const converted = Math.round(eur * SAMPLE_RATES[currency]);
-  return stable(formatters[currency].format(converted));
+/** Format a euro amount. Display currency is euros. */
+export function formatMoney(amount: number, currency: CurrencyCode = "EUR") {
+  if (currency !== "EUR") return stable(euro.format(Math.round(amount)));
+  return stable(euro.format(Math.round(amount)));
 }
 
 /** Grouped count, same space rules as money. */

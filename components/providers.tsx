@@ -1,11 +1,10 @@
 "use client";
 
-import { CommandPaletteProvider } from "@/components/layout/command-palette";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 
-/** Theme, toasts, and tooltip delay. Command palette mounts beside these. */
+/** Theme and toasts. The command palette sits inside the locale provider. */
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider
@@ -15,10 +14,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <TooltipProvider delay={200}>
-        <CommandPaletteProvider>
-          {children}
-          <Toaster position="top-center" closeButton />
-        </CommandPaletteProvider>
+        {children}
+        <Toaster position="top-center" closeButton />
       </TooltipProvider>
     </ThemeProvider>
   );

@@ -1,20 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, Luggage, Ticket, Wallet } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Compass, Luggage, MessagesSquare, Wallet } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { cn } from "cn";
-
-const tabs = [
-  { href: "/plan", label: "Plan", icon: Compass },
-  { href: "/results", label: "Results", icon: Ticket },
-  { href: "/trips", label: "Trips", icon: Luggage },
-  { href: "/wallet", label: "Wallet", icon: Wallet },
-];
 
 /** Phone navigation. Sits above the home indicator. */
 export function MobileTabBar() {
+  const t = useTranslations("common");
   const pathname = usePathname();
+  const tabs = [
+    { href: "/chat", label: t("chat"), icon: MessagesSquare },
+    { href: "/trips", label: t("trips"), icon: Luggage },
+    { href: "/earn", label: t("earn"), icon: Compass },
+    { href: "/wallet", label: t("wallet"), icon: Wallet },
+  ];
 
   return (
     <nav
@@ -24,7 +25,7 @@ export function MobileTabBar() {
     >
       <ul className="grid grid-cols-4">
         {tabs.map((tab) => {
-          const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+          const active = pathname.includes(tab.href);
           const Icon = tab.icon;
           return (
             <li key={tab.href}>
@@ -34,7 +35,6 @@ export function MobileTabBar() {
                   "flex min-h-14 flex-col items-center justify-center gap-1 text-[11px]",
                   active ? "text-accent" : "text-ink-muted",
                 )}
-                aria-current={active ? "page" : undefined}
               >
                 <Icon className="size-5" aria-hidden="true" />
                 {tab.label}

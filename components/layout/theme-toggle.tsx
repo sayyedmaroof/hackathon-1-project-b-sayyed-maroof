@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
@@ -11,6 +12,7 @@ function subscribe() {
 
 /** Switches the class-based theme. Icon reflects the resolved theme. */
 export function ThemeToggle() {
+  const t = useTranslations("common");
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(subscribe, () => true, () => false);
 
@@ -21,7 +23,7 @@ export function ThemeToggle() {
       type="button"
       variant="outline"
       size="icon"
-      aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+      aria-label={dark ? t("themeLight") : t("themeDark")}
       onClick={() => setTheme(dark ? "light" : "dark")}
     >
       {dark ? <Sun /> : <Moon />}

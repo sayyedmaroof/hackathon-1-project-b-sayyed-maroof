@@ -9,10 +9,11 @@ type PriceHeatmapProps = {
   cells: HeatCell[];
   selected?: string;
   onSelect?: (date: string) => void;
+  formatValue?: (price: number) => string;
 };
 
 /** A two-week price grid. Darker green is the lower fare. */
-export function PriceHeatmap({ cells, selected, onSelect }: PriceHeatmapProps) {
+export function PriceHeatmap({ cells, selected, onSelect, formatValue }: PriceHeatmapProps) {
   const { prefs } = usePreferences();
   const prices = cells.map((cell) => cell.price);
   const min = Math.min(...prices);
@@ -32,7 +33,7 @@ export function PriceHeatmap({ cells, selected, onSelect }: PriceHeatmapProps) {
               selected === cell.date ? "border-ink" : "border-transparent",
             )}
             style={{ background: `color-mix(in srgb, var(--saving) ${Math.round(12 + ratio * 68)}%, var(--paper))` }}
-            aria-label={`${cell.date}, ${formatMoney(cell.price, prefs.currency)}`}
+            aria-label={`${cell.date}, ${formatValue ? formatValue(cell.price) : formatMoney(cell.price, prefs.currency)}`}
             aria-pressed={selected === cell.date}
           >
             <span>{cell.date.slice(8)}</span>

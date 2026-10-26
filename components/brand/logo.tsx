@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { Mark, type MarkVariant } from "@/components/brand/mark";
 import { siteConfig } from "@/lib/site-config";
 import { cn } from "cn";

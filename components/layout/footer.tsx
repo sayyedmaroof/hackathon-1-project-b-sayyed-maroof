@@ -1,39 +1,37 @@
 "use client";
 
-import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Logo } from "@/components/brand/logo";
 import { Container } from "@/components/layout/container";
 import { SampleNote } from "@/components/layout/sample-note";
-import { usePreferences } from "@/hooks/use-preferences";
 import { siteConfig } from "@/lib/site-config";
-import type { CurrencyCode } from "@/lib/types";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 
-const currencies: CurrencyCode[] = ["EUR", "GBP", "USD"];
-
-const columns = [
-  {
-    title: "Product",
-    links: [
-      { href: "/plan", label: "Check a trip" },
-      { href: "/hacks", label: "The hacks" },
-      { href: "/wallet", label: "Miles and points" },
-      { href: "/trips", label: "Saved trips" },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      { href: "/#how-it-works", label: "How it works" },
-      { href: "/#trust", label: "True total cost" },
-      { href: "/#faq", label: "Questions" },
-      { href: "/login", label: "Log in" },
-    ],
-  },
-];
-
-/** Site footer with a display-only currency switch. */
+/** Site footer with a locale switch. Prices stay in euros. */
 export function Footer() {
-  const { prefs, update } = usePreferences();
+  const t = useTranslations("nav");
+  const common = useTranslations("common");
+  const pathname = usePathname();
+  const router = useRouter();
+  const columns = [
+    {
+      title: t("product"),
+      links: [
+        { href: "/chat", label: common("chat") },
+        { href: "/hacks", label: common("learn") },
+        { href: "/earn", label: common("earn") },
+        { href: "/trips", label: common("trips") },
+      ],
+    },
+    {
+      title: t("company"),
+      links: [
+        { href: "/#how", label: t("how") },
+        { href: "/pricing", label: common("pricing") },
+        { href: "/login", label: common("login") },
+      ],
+    },
+  ];
 
   return (
     <footer className="border-t border-line bg-surface">
@@ -46,16 +44,11 @@ export function Footer() {
         </div>
         {columns.map((column) => (
           <div key={column.title}>
-            <p className="text-xs font-medium tracking-[0.16em] text-ink-muted uppercase">
-              {column.title}
-            </p>
+            <p className="text-xs font-medium tracking-[0.16em] text-ink-muted uppercase">{column.title}</p>
             <ul className="mt-3">
               {column.links.map((link) => (
                 <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="inline-flex min-h-11 items-center text-sm hover:text-accent"
-                  >
+                  <Link href={link.href} className="inline-flex min-h-11 items-center text-sm">
                     {link.label}
                   </Link>
                 </li>
@@ -65,33 +58,21 @@ export function Footer() {
         ))}
       </Container>
       <Container className="flex flex-col gap-4 border-t border-line py-5 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-ink-muted">
-          © {siteConfig.name}. Prices in this preview are sample figures.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
+        <p className="text-xs text-ink-muted">© {siteConfig.name}. {t("rights")}</p>
+        <div className="flex items-center gap-3">
           <SampleNote />
-          <div
-            className="flex rounded-full border border-line p-1"
-            role="group"
-            aria-label="Display currency"
-          >
-            {currencies.map((currency) => (
+          <div className="flex rounded-full border border-line p-1" role="group" aria-label={common("language")}>
+            {(["es", "en"] as const).map((locale) => (
               <button
-                key={currency}
+                key={locale}
                 type="button"
-                aria-pressed={prefs.currency === currency}
-                onClick={() => update({ currency })}
-                className={`min-h-11 rounded-full px-3 text-sm ${
-                  prefs.currency === currency
-                    ? "bg-ink text-paper"
-                    : "text-ink-muted"
-                }`}
+                className="min-h-11 rounded-full px-3 text-sm"
+                onClick={() => router.replace(pathname, { locale })}
               >
-                {currency === "EUR" ? "€" : currency === "GBP" ? "£" : "$"} {currency}
+                {locale.toUpperCase()}
               </button>
             ))}
           </div>
-          <span className="text-xs text-ink-muted">English</span>
         </div>
       </Container>
     </footer>

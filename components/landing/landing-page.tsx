@@ -5,6 +5,8 @@ import { useReducedMotion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { Container } from "@/components/layout/container";
 import { Section } from "@/components/layout/section";
+import { Marquee } from "@/components/fare/marquee";
+import { RouteMap } from "@/components/fare/route-map";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { siteConfig } from "@/lib/site-config";
@@ -43,6 +45,9 @@ export function LandingPage() {
               <Button render={<Link href="/chat" />}>{common("start")}</Button>
               <Button variant="outline" render={<Link href="/pricing" />}>{common("pricing")}</Button>
             </div>
+            <div className="mt-6 h-40">
+              <RouteMap label={t("mapLabel")} />
+            </div>
           </div>
           <div className="rounded-[28px] border border-line bg-surface p-5" aria-hidden="true">
             <p className="rounded-2xl bg-chat-user px-3 py-2 text-sm">{t("demoUser")}</p>
@@ -51,6 +56,7 @@ export function LandingPage() {
           </div>
         </Container>
       </Section>
+      <Marquee />
       <Section>
         <Container>
           <p className="text-sm text-ink-muted">{t("journey")}</p>

@@ -62,7 +62,7 @@ export interface Segment {
   layoverMinutes?: number;
 }
 
-export type CostKind = "fare" | "bags" | "ground" | "taxes";
+export type CostKind = "fare" | "bags" | "ground" | "taxes" | "points" | "surcharges" | "fees";
 
 export interface CostLine {
   label: string;

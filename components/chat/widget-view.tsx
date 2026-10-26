@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useReducedMotion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { BoardingPassCard } from "@/components/fare/boarding-pass";
 import { FlipNumber } from "@/components/fare/flip-number";
+import { PriceCompare } from "@/components/fare/price-compare";
 import { PriceHeatmap } from "@/components/fare/price-heatmap";
 import { RiskLabel } from "@/components/fare/risk-label";
 import { SampleNote } from "@/components/layout/sample-note";
@@ -81,7 +83,18 @@ export function AwardOptionCard({
   const t = useTranslations("widgets");
   const common = useTranslations("common");
   const saved = saving(option);
+  const reduce = useReducedMotion();
+  const landed = `${formatCount(option.points)} + ${formatMoney(outlay(option))}`;
+  const [flap, setFlap] = useState(() => formatMoney(option.cashPrice));
   const [showWhy, setShowWhy] = useState(false);
+
+  useEffect(() => {
+    if (reduce) return;
+    const timer = window.setTimeout(() => setFlap(landed), 700);
+    return () => window.clearTimeout(timer);
+  }, [landed, reduce]);
+
+  const shown = reduce ? landed : flap;
   return (
     <Frame frozen={frozen}>
       <BoardingPassCard
@@ -106,10 +119,13 @@ export function AwardOptionCard({
           {option.returnDate ? ` – ${option.returnDate}` : ""} · {option.cabin}
         </p>
         <div className="mt-4">
-          <p className="text-sm text-ink-muted line-through">{formatMoney(option.cashPrice)}</p>
-          <p className="text-3xl">
-            <FlipNumber value={`${formatCount(option.points)} + ${formatMoney(outlay(option))}`} />
-          </p>
+          <PriceCompare
+            normal={option.cashPrice}
+            hacked={outlay(option)}
+            hackedLabel={shown}
+            percent={Math.round((saved / Math.max(option.cashPrice, 1)) * 100)}
+            showSaving={false}
+          />
         </div>
         {saved > 0 ? (
           <p className="mt-2 text-sm text-saving">{t("saves", { amount: formatMoney(saved) })}</p>

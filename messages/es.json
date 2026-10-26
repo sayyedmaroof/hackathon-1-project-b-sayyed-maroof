@@ -153,6 +153,8 @@
     "sub": "Hablas con Fareflip y recorres lo que hoy hace un consultor: el objetivo, cómo acumular, la plaza y el momento de mover Avios.",
     "demoUser": "Quiero volar en business a Sudáfrica en 90 días",
     "demoTool": "Buscando disponibilidad en 3 programas…",
+    "programs": "Programas",
+    "mapLabel": "Mapa esquemático de rutas de ejemplo",
     "journey": "De 0 a 100",
     "journeyTitle": "Cinco pasos, y el siguiente siempre está a la vista.",
     "steps": ["Objetivo", "Acumular", "Buscar", "Mover puntos", "Reservar"],
@@ -212,6 +214,20 @@
     "authToast": "Esta vista previa no inicia sesión.",
     "tripTitle": "Itinerario con puntos",
     "readiness": "Lista de preparación",
-    "alertsNeedPlan": "Las alertas van con un plan de pago."
+    "alertsNeedPlan": "Las alertas van con un plan de pago.",
+    "mapLabel": "Mapa esquemático de esta ruta",
+    "trueTotal": "Efectivo que aún pagas",
+    "costPoints": "Puntos",
+    "costTaxes": "Tasas",
+    "costSurcharges": "Recargos",
+    "costFees": "Comisiones de la tarjeta",
+    "alertTitle": "Alerta de precio",
+    "alertBook": "Esta plaza de ejemplo es la barata.",
+    "alertWait": "La señal de ejemplo está tranquila. Puedes esperar.",
+    "worth": "Vale unos {amount}",
+    "expires": "Caduca el {date}",
+    "coverTrip": "Llegas al próximo viaje fijado.",
+    "shortOf": "Te faltan {count} {unit} para el próximo viaje fijado.",
+    "remove": "Quitar"
   }
 }

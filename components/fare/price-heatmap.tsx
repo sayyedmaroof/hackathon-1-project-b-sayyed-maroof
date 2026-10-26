@@ -2,7 +2,6 @@
 
 import type { HeatCell } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
-import { usePreferences } from "@/hooks/use-preferences";
 import { cn } from "cn";
 
 type PriceHeatmapProps = {
@@ -14,7 +13,6 @@ type PriceHeatmapProps = {
 
 /** A two-week price grid. Darker green is the lower fare. */
 export function PriceHeatmap({ cells, selected, onSelect, formatValue }: PriceHeatmapProps) {
-  const { prefs } = usePreferences();
   const prices = cells.map((cell) => cell.price);
   const min = Math.min(...prices);
   const max = Math.max(...prices);
@@ -33,7 +31,7 @@ export function PriceHeatmap({ cells, selected, onSelect, formatValue }: PriceHe
               selected === cell.date ? "border-ink" : "border-transparent",
             )}
             style={{ background: `color-mix(in srgb, var(--saving) ${Math.round(12 + ratio * 68)}%, var(--paper))` }}
-            aria-label={`${cell.date}, ${formatValue ? formatValue(cell.price) : formatMoney(cell.price, prefs.currency)}`}
+            aria-label={`${cell.date}, ${formatValue ? formatValue(cell.price) : formatMoney(cell.price)}`}
             aria-pressed={selected === cell.date}
           >
             <span>{cell.date.slice(8)}</span>

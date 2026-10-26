@@ -232,6 +232,7 @@
 .saving-pulse { animation: saving-pulse 2.6s ease-out infinite; }
 .route-arc { stroke-dasharray: 3 2.4; animation: route-dash 14s linear infinite; }
 .marquee-track { animation: marquee-scroll 36s linear infinite; }
+.marquee-wrap:hover .marquee-track { animation-play-state: paused; }
 
 @media (prefers-reduced-motion: reduce) {
   .route-arc,

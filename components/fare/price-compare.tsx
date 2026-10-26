@@ -2,34 +2,34 @@
 
 import { FlipNumber } from "@/components/fare/flip-number";
 import { SavingsBadge } from "@/components/fare/savings-badge";
-import { usePreferences } from "@/hooks/use-preferences";
 import { formatMoney, formatSaving } from "@/lib/format";
 import { cn } from "cn";
 
 type PriceCompareProps = {
   normal: number;
   hacked: number;
+  /** Shown on the flap when the landed price is not a cash amount. */
+  hackedLabel?: string;
   percent: number;
   className?: string;
   size?: "md" | "lg";
+  showSaving?: boolean;
 };
 
-/** Struck normal fare, then the hacked fare on the split-flap. */
+/** Struck cash fare, then the award price on the split-flap. */
 export function PriceCompare({
   normal,
   hacked,
+  hackedLabel,
   percent,
   className,
   size = "md",
+  showSaving = true,
 }: PriceCompareProps) {
-  const { prefs } = usePreferences();
-  const currency = prefs.currency;
-
   return (
     <div className={cn("flex flex-wrap items-end gap-x-4 gap-y-2", className)}>
       <p className="num text-ink-muted line-through decoration-ink-muted/70">
-        <span className="sr-only">Normal price </span>
-        {formatMoney(normal, currency)}
+        {formatMoney(normal)}
       </p>
       <p
         className={cn(
@@ -37,14 +37,14 @@ export function PriceCompare({
           size === "lg" ? "text-5xl md:text-6xl" : "text-3xl",
         )}
       >
-        <span className="sr-only">Hacked price </span>
-        <FlipNumber value={formatMoney(hacked, currency)} />
+        <FlipNumber value={hackedLabel ?? formatMoney(hacked)} />
       </p>
-      <p className="num text-saving">
-        <span className="sr-only">You save </span>
-        {formatSaving(normal - hacked, currency)}
-      </p>
-      <SavingsBadge percent={percent} size={size === "lg" ? "lg" : "md"} />
+      {showSaving ? (
+        <>
+          <p className="num text-saving">{formatSaving(normal - hacked)}</p>
+          <SavingsBadge percent={percent} size={size === "lg" ? "lg" : "md"} />
+        </>
+      ) : null}
     </div>
   );
 }

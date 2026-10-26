@@ -1,7 +1,4 @@
-"use client";
-
-import { usePreferences } from "@/hooks/use-preferences";
-import { formatMoney } from "@/lib/format";
+import { formatCount, formatMoney } from "@/lib/format";
 import type { CostLine } from "@/lib/types";
 
 const tones: Record<CostLine["kind"], string> = {
@@ -9,20 +6,26 @@ const tones: Record<CostLine["kind"], string> = {
   bags: "bg-accent",
   ground: "bg-warn",
   taxes: "bg-ink-muted",
+  points: "bg-saving",
+  surcharges: "bg-warn",
+  fees: "bg-accent",
 };
 
-/** Fare, bags, ground and taxes, as a stacked bar and a list. */
-export function TotalCostBreakdown({ lines }: { lines: CostLine[] }) {
-  const { prefs } = usePreferences();
-  const total = lines.reduce((sum, line) => sum + line.amount, 0);
-  const shown = lines.some((line) => line.amount > 0)
-    ? lines.filter((line) => line.amount > 0)
-    : lines;
+/** Points as a count, and the cash lines as euros. */
+export function TotalCostBreakdown({
+  lines,
+  totalLabel,
+}: {
+  lines: CostLine[];
+  totalLabel: string;
+}) {
+  const money = lines.filter((line) => line.kind !== "points" && line.amount > 0);
+  const total = money.reduce((sum, line) => sum + line.amount, 0);
 
   return (
     <div>
       <div className="flex h-3 overflow-hidden rounded-full" aria-hidden="true">
-        {shown.map((line) => (
+        {money.map((line) => (
           <span
             key={line.kind}
             className={tones[line.kind]}
@@ -31,19 +34,21 @@ export function TotalCostBreakdown({ lines }: { lines: CostLine[] }) {
         ))}
       </div>
       <ul className="mt-4 space-y-2">
-        {shown.map((line) => (
+        {lines.map((line) => (
           <li key={line.kind} className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2">
               <span className={`size-2 rounded-full ${tones[line.kind]}`} aria-hidden="true" />
               {line.label}
             </span>
-            <span className="num">{formatMoney(line.amount, prefs.currency)}</span>
+            <span className="num">
+              {line.kind === "points" ? formatCount(line.amount) : formatMoney(line.amount)}
+            </span>
           </li>
         ))}
       </ul>
       <p className="mt-4 flex justify-between border-t border-line pt-3 text-sm font-medium">
-        <span>True total</span>
-        <span className="num">{formatMoney(total, prefs.currency)}</span>
+        <span>{totalLabel}</span>
+        <span className="num">{formatMoney(total)}</span>
       </p>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { WidgetView } from "@/components/chat/widget-view";
+import { SkeletonResult } from "@/components/fare/skeleton-result";
 import { Logo } from "@/components/brand/logo";
 import { ScreenshotDropzone } from "@/components/search/screenshot-dropzone";
 import { Button } from "@/components/ui/button";
@@ -41,14 +42,18 @@ function MessageParts({
       {parts.map((part, index) => {
         if (part.type === "text") return <p key={index} className="text-sm leading-relaxed">{part.text}</p>;
         if (part.type === "tools") {
+          const running = part.items.some((item) => !item.done);
           return (
-            <ul key={index} className="space-y-1 text-sm text-ink-muted">
-              {part.items.map((item) => (
-                <li key={item.id}>
-                  {item.done ? "✓" : "…"} {item.label}
-                </li>
-              ))}
-            </ul>
+            <div key={index} className="space-y-2">
+              {running ? <SkeletonResult /> : null}
+              <ul className="space-y-1 text-sm text-ink-muted">
+                {part.items.map((item) => (
+                  <li key={item.id}>
+                    {item.done ? "✓" : "…"} {item.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
           );
         }
         if (part.type === "error") {

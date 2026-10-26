@@ -153,6 +153,8 @@
     "sub": "Talk to Fareflip and walk the path a consultant walks today: the goal, how to earn, the seat, and when to move Avios.",
     "demoUser": "I want business class to South Africa in 90 days",
     "demoTool": "Checking availability across 3 programs…",
+    "programs": "Programs",
+    "mapLabel": "Schematic map of sample routes",
     "journey": "From 0 to 100",
     "journeyTitle": "Five steps, and the next one is always in sight.",
     "steps": ["Goal", "Earn", "Search", "Move points", "Book"],
@@ -212,6 +214,20 @@
     "authToast": "This preview does not sign you in.",
     "tripTitle": "Award itinerary",
     "readiness": "Readiness",
-    "alertsNeedPlan": "Alerts need a paid plan."
+    "alertsNeedPlan": "Alerts need a paid plan.",
+    "mapLabel": "Schematic map of this route",
+    "trueTotal": "Cash still due",
+    "costPoints": "Points",
+    "costTaxes": "Taxes",
+    "costSurcharges": "Surcharges",
+    "costFees": "Card fees",
+    "alertTitle": "Price alert",
+    "alertBook": "This sample seat is the cheap one.",
+    "alertWait": "The sample signal is calm. You can wait.",
+    "worth": "Worth about {amount}",
+    "expires": "Expires {date}",
+    "coverTrip": "You can cover the next pinned trip.",
+    "shortOf": "{count} {unit} short of the next pinned trip.",
+    "remove": "Remove"
   }
 }

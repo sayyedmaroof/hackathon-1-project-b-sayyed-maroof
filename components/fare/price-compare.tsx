@@ -3,7 +3,7 @@
 import { FlipNumber } from "@/components/fare/flip-number";
 import { SavingsBadge } from "@/components/fare/savings-badge";
 import { formatMoney, formatSaving } from "@/lib/format";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 type PriceCompareProps = {
   normal: number;

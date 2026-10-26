@@ -9,7 +9,7 @@ import type { WidgetPart } from "@/lib/agent/widgets";
 const widgets: WidgetPart[] = [
   jnbStrategy,
   { type: "compare", options: jnbAwards },
-  { type: "usage", used: 30, limit: 30, feature: "búsquedas" },
+  { type: "usage", used: 30, limit: 30, feature: "searches" },
 ];
 
 export function WidgetGallery() {

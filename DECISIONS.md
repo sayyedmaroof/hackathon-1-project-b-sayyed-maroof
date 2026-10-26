@@ -14,8 +14,8 @@ Product calls for the Fareflip preview.
 
 ## v2
 
-- Fareflip is a Spanish-first award-travel agent. Default locale is `es`. English is `en`, prefixed (`/en/chat`). Spanish URLs stay unprefixed.
-- Tagline options: “Dale la vuelta a la tarifa.”, “La tarifa, del revés.”, “Voltea la tarifa.” The product uses **Dale la vuelta a la tarifa.**
+- English is the only locale for now. Spanish copy stays in `messages/es.json` and is not routed.
+- The live tagline is “Turn the fare around.” The Spanish options stay on record: “Dale la vuelta a la tarifa.”, “La tarifa, del revés.”, “Voltea la tarifa.”
 - Money is EUR via `Intl.NumberFormat("es-ES")`. The GBP/USD footer switch is gone.
 - `next-intl` is the i18n layer. The html document lives in `app/[locale]/layout.tsx`, so `locale` is a root param and `i18n/request.ts` can read `next/root-params`. Prerender does not call `cookies()`. `localeDetection` is off, so a first visit stays in Spanish.
 - `runAgent` is the only agent function a real backend replaces. The mock runs in the client so prerender never waits on a stream.
@@ -29,5 +29,13 @@ Product calls for the Fareflip preview.
 - Plans are Free, Pro, and Plus. Checkout is a mock modal. There are no card fields.
 - Alerts require a paid plan.
 - Sample figures carry a source and a last-verified date. `lib/mock/flag.ts` is the switch for the “Datos de ejemplo” badge.
-- The demo person is Marta, in Madrid. No real consultant names, emails, account numbers, or marketing images.
+- The demo person is Marta, in Madrid. No real consultant names, emails, or account numbers.
+- Marketing stills in `public/images` are Pexels photos. Credits live in `lib/photos.ts`. The landing page does not use them.
 - The agent never asks for a loyalty password. Balances are typed in by hand.
+
+## Gate and cleanup
+
+- A transfer or points purchase stays locked until availability is confirmed and the person checks that it cannot be undone. The browser asserts the gate; a real backend must check it again before moving points.
+- The landing hero is a scripted chat. Cash flips into points plus taxes, and that page has no stock photo.
+- Assistant messages can be copied, regenerated, or shared. Regenerate replaces the last reply instead of adding another.
+- The old cash-search controls and the `fareflip:saved-trips` and `fareflip:preferences` keys are gone. Saved trips live on the `fareflip:v2` board.

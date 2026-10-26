@@ -7,7 +7,7 @@ import { Container } from "@/components/layout/container";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useCommandPalette } from "@/components/layout/command-palette";
 import { Link, usePathname } from "@/i18n/navigation";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 /** Slim product bar. The phone way around is the bottom tab bar. */
 export function AppHeader() {

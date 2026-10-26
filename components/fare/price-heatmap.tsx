@@ -2,7 +2,7 @@
 
 import type { HeatCell } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 type PriceHeatmapProps = {
   cells: HeatCell[];

@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 /** The percentage saved. `--saving` is reserved for this kind of number. */
 export function SavingsBadge({

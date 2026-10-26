@@ -1,7 +1,7 @@
 import { Link } from "@/i18n/navigation";
 import { Mark, type MarkVariant } from "@/components/brand/mark";
 import { siteConfig } from "@/lib/site-config";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 type LogoProps = {
   className?: string;

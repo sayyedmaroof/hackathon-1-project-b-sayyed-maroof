@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useReducedMotion } from "motion/react";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 type FlipNumberProps = {
   value: string;

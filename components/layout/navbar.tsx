@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 /** Marketing bar. It tightens once the page moves. */
 export function Navbar() {

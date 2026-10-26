@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 /** Page column. Mobile padding first, then a 1200px measure. */
 export function Container({

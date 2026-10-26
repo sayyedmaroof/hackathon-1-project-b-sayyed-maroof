@@ -14,7 +14,7 @@ import { useFareStore, type Conversation, type MessagePart } from "@/hooks/use-f
 import type { AwardOption, WidgetPart } from "@/lib/agent/widgets";
 import { usageLevel } from "@/lib/agent/gates";
 import { Link, useRouter } from "@/i18n/navigation";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 function hasAvailability(parts: MessagePart[]) {
   return parts.some((part) => part.type === "widget" && part.widget.type === "availability");

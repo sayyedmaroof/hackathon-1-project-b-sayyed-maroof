@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Compass, Luggage, MessagesSquare, Wallet } from "lucide-react";
 import { Link } from "@/i18n/navigation";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 /** Phone navigation. Sits above the home indicator. */
 export function MobileTabBar() {

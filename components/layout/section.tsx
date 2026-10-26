@@ -1,5 +1,5 @@
 import { Container } from "@/components/layout/container";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 type SectionProps = {
   id?: string;

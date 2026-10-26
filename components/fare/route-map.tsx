@@ -1,5 +1,5 @@
 import { listAirports } from "@/lib/api/content";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 type RouteMapProps = {
   pairs?: { from: string; to: string }[];

@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import type { Risk } from "@/lib/types";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 const tone: Record<Risk, string> = {
   low: "border-line text-ink",

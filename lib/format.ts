@@ -28,10 +28,20 @@ const formatters: Record<CurrencyCode, Intl.NumberFormat> = {
   }),
 };
 
+/** Intl can emit different spaces in Node and the browser. One space keeps SSR stable. */
+function stable(formatted: string) {
+  return formatted.replace(/[\u00A0\u202F\u2007\u2009]/g, " ");
+}
+
 /** Format a euro amount in the selected display currency. */
 export function formatMoney(eur: number, currency: CurrencyCode = "EUR") {
   const converted = Math.round(eur * SAMPLE_RATES[currency]);
-  return formatters[currency].format(converted);
+  return stable(formatters[currency].format(converted));
+}
+
+/** Grouped count, same space rules as money. */
+export function formatCount(value: number) {
+  return stable(new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 }).format(value));
 }
 
 /** Signed saving, e.g. "−225 €". */
@@ -63,24 +73,22 @@ export function formatExtraTime(minutes: number) {
 const dayFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
+  timeZone: "UTC",
 });
 
-const timeFormatter = new Intl.DateTimeFormat("en-GB", {
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
-
+/** Calendar day from the ISO date, not the viewer's timezone. */
 export function formatDay(iso: string) {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
+  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return iso;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
   return dayFormatter.format(date);
 }
 
+/** Wall-clock time written on the ticket. Offsets stay with the airport, not the browser. */
 export function formatTime(iso: string) {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return timeFormatter.format(date);
+  const match = iso.match(/T(\d{2}):(\d{2})/);
+  if (!match) return iso;
+  return `${match[1]}:${match[2]}`;
 }
 
 export function formatPricedAt(iso: string) {

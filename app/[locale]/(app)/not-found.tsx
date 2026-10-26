@@ -10,6 +10,7 @@ export default async function AppNotFound() {
       body={t("missingBody")}
       actionHref="/chat"
       actionLabel={t("chat")}
+      photo="cabin"
     />
   );
 }

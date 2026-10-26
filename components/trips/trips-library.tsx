@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/layout/empty-state";
+import { PhotoMast } from "@/components/layout/photo-mast";
 import { SampleNote } from "@/components/layout/sample-note";
 import { SavedTripCard } from "@/components/trips/saved-trip-card";
 import { TotalSavedCounter } from "@/components/trips/total-saved-counter";
@@ -19,6 +20,7 @@ export function TripsLibrary() {
 
   return (
     <div>
+      <PhotoMast id="cape" />
       <h1 className="font-display text-4xl tracking-tight">{t("tripsTitle")}</h1>
       <p className="mt-2 text-sm text-ink-muted">{t("value")}</p>
       <div className="mt-2">

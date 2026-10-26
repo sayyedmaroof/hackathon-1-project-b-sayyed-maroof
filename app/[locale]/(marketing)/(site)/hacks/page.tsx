@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { RiskLabel } from "@/components/fare/risk-label";
 import { Container } from "@/components/layout/container";
 import { Link } from "@/i18n/navigation";
 import { listHacks } from "@/lib/api/content";
+import { gallery, photos } from "@/lib/photos";
 
 export async function generateMetadata({
   params,
@@ -27,12 +29,25 @@ export default async function HacksPage({ params }: { params: Promise<{ locale: 
       </h1>
       <p className="mt-3 max-w-xl text-ink-muted">{t("learnBody")}</p>
       <ul className="mt-10 divide-y divide-line border-y border-line">
-        {hacks.map((hack) => (
+        {hacks.map((hack, index) => {
+          const photo = photos[gallery[index % gallery.length]];
+          return (
           <li key={hack.slug}>
-            <Link href={`/hacks/${hack.slug}`} className="flex flex-col gap-3 py-6 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="font-display text-3xl tracking-tight">{hack.name}</h2>
-                <p className="mt-1 max-w-xl text-sm text-ink-muted">{hack.summary}</p>
+            <Link href={`/hacks/${hack.slug}`} className="group flex flex-col gap-4 py-6 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-2xl">
+                  <Image
+                    src={photo.src}
+                    alt=""
+                    fill
+                    sizes="96px"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                  />
+                </div>
+                <div>
+                  <h2 className="font-display text-3xl tracking-tight">{hack.name}</h2>
+                  <p className="mt-1 max-w-xl text-sm text-ink-muted">{hack.summary}</p>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <span className="text-sm text-ink-muted">{hack.difficulty}</span>
@@ -41,7 +56,8 @@ export default async function HacksPage({ params }: { params: Promise<{ locale: 
               </div>
             </Link>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </Container>
   );

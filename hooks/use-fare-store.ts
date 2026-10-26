@@ -85,10 +85,10 @@ type Store = {
 };
 
 const defaultChecklist: ChecklistItem[] = [
-  { id: "iberia", label: "Abrir cuenta de Iberia Club", done: false, due: "2026-11-15" },
-  { id: "link", label: "Vincular BA y Qatar", done: false, due: "2026-12-01" },
-  { id: "check", label: "Comprobar disponibilidad", done: false, due: "2027-01-10" },
-  { id: "move", label: "Transferir Avios", done: false, due: "2027-01-18" },
+  { id: "iberia", label: "Open an Iberia Club account", done: false, due: "2026-11-15" },
+  { id: "link", label: "Link BA and Qatar", done: false, due: "2026-12-01" },
+  { id: "check", label: "Check availability", done: false, due: "2027-01-10" },
+  { id: "move", label: "Transfer Avios", done: false, due: "2027-01-18" },
 ];
 
 const defaultWallet: WalletProgram[] = [

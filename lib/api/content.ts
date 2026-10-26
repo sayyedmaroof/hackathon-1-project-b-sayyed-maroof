@@ -15,11 +15,11 @@ export function getAirport(code: string) {
   return airportByCode(code) ?? null;
 }
 
-export function listHacks(locale: string = "es") {
-  return locale === "en" ? hacks : hacksEs;
+export function listHacks(locale: string = "en") {
+  return locale === "es" ? hacksEs : hacks;
 }
 
-export function getHack(slug: string, locale: string = "es") {
+export function getHack(slug: string, locale: string = "en") {
   return listHacks(locale).find((hack) => hack.slug === slug) ?? null;
 }
 

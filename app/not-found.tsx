@@ -4,10 +4,11 @@ export default function NotFound() {
   return (
     <StatusScreen
       eyebrow="404"
-      title="Esa tarjeta de embarque no está en este vuelo."
-      body="La página no existe. El chat sigue donde lo dejaste."
+      title="That boarding pass is not on this flight."
+      body="This page does not exist. The chat is still there."
       actionHref="/chat"
-      actionLabel="Abrir el chat"
+      actionLabel="Open the chat"
+      photo="cabin"
     />
   );
 }

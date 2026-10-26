@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
+import { motion, useReducedMotion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { WidgetView } from "@/components/chat/widget-view";
@@ -14,6 +16,7 @@ import { useFareStore, type Conversation, type MessagePart } from "@/hooks/use-f
 import type { AwardOption, WidgetPart } from "@/lib/agent/widgets";
 import { usageLevel } from "@/lib/agent/gates";
 import { Link, useRouter } from "@/i18n/navigation";
+import { photos } from "@/lib/photos";
 import { cn } from "@/lib/utils";
 
 function hasAvailability(parts: MessagePart[]) {
@@ -94,6 +97,7 @@ export function ChatScreen({
 }) {
   const t = useTranslations("chat");
   const common = useTranslations("common");
+  const reduced = useReducedMotion();
   const router = useRouter();
   const fare = useFareStore();
   const chat = useChat(locale);
@@ -176,14 +180,24 @@ export function ChatScreen({
         >
           {!conversation ? (
             <div className="mx-auto max-w-xl pt-10">
+              <div className="flex gap-3">
+                {[photos.cards, photos.window, photos.city].map((photo) => (
+                  <div key={photo.src} className="relative h-24 w-28 overflow-hidden rounded-2xl sm:h-28 sm:w-36">
+                    <Image src={photo.src} alt={photo.alt} fill sizes="144px" className="object-cover" />
+                  </div>
+                ))}
+              </div>
               <Logo />
               <h1 className="mt-6 font-display text-4xl tracking-tight md:text-5xl">{t("emptyTitle")}</h1>
               <p className="mt-3 text-ink-muted">{t("emptyBody")}</p>
             </div>
           ) : (
             messages.map((message) => (
-              <article
+              <motion.article
                 key={message.id}
+                initial={reduced ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                 className={cn("group flex", message.role === "user" ? "justify-end" : "justify-start")}
               >
                 <div
@@ -229,7 +243,7 @@ export function ChatScreen({
                     )
                   )}
                 </div>
-              </article>
+              </motion.article>
             ))
           )}
         </div>

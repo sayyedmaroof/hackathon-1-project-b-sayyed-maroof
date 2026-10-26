@@ -4,14 +4,11 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useFareStore } from "@/hooks/use-fare-store";
-import { usePathname, useRouter } from "@/i18n/navigation";
 
 export function SettingsForm() {
   const t = useTranslations("pages");
   const common = useTranslations("common");
   const fare = useFareStore();
-  const router = useRouter();
-  const pathname = usePathname();
   const settings = fare.store.settings;
 
   return (
@@ -49,13 +46,6 @@ export function SettingsForm() {
         />
       </label>
       {!fare.plan.alerts ? <p className="text-sm text-warn">{t("alertsNeedPlan")}</p> : null}
-      <div className="flex gap-2">
-        {(["es", "en"] as const).map((locale) => (
-          <button key={locale} type="button" className="min-h-11 rounded-full border border-line px-3" onClick={() => router.replace(pathname, { locale })}>
-            {locale.toUpperCase()}
-          </button>
-        ))}
-      </div>
       <p className="text-sm text-ink-muted">{common("privacy")}</p>
       <Button type="submit">{t("seeChat")}</Button>
     </form>

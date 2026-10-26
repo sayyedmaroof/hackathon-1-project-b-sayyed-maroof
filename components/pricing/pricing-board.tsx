@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { PhotoMast } from "@/components/layout/photo-mast";
 import { SampleNote } from "@/components/layout/sample-note";
 import { Button } from "@/components/ui/button";
 import { useFareStore } from "@/hooks/use-fare-store";
@@ -22,6 +23,7 @@ export function PricingBoard() {
 
   return (
     <div className="space-y-8">
+      <PhotoMast id="wallet" />
       <h1 className="font-display text-4xl tracking-tight">{t("pricingTitle")}</h1>
       <div className="flex gap-2">
         {(["monthly", "annual"] as const).map((billing) => (
@@ -40,14 +42,14 @@ export function PricingBoard() {
       </p>
       <div className="grid gap-3 md:grid-cols-3">
         {farePlans.map((plan) => (
-          <article key={plan.id} className="rounded-[24px] border border-line bg-surface p-5">
+          <article key={plan.id} className="lift rounded-[24px] border border-line bg-surface p-5">
             <h2 className="font-display text-3xl capitalize">{plan.id}</h2>
             <p className="num mt-2 text-2xl">{formatMoney(price(plan.id))}</p>
             <ul className="mt-3 space-y-1 text-sm text-ink-muted">
-              <li>{plan.searches} / mes</li>
-              <li>{plan.horizonMonths} meses</li>
-              <li>{plan.saved} itinerarios</li>
-              <li>{plan.alerts ? "Alertas" : "Sin alertas"}</li>
+              <li>{plan.searches} / month</li>
+              <li>{plan.horizonMonths} months</li>
+              <li>{plan.saved} itineraries</li>
+              <li>{plan.alerts ? "Alerts" : "No alerts"}</li>
               <li>{plan.refresh}</li>
             </ul>
             {plan.id !== "free" ? (

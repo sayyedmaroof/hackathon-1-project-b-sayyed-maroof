@@ -234,12 +234,77 @@
 .marquee-track { animation: marquee-scroll 36s linear infinite; }
 .marquee-wrap:hover .marquee-track { animation-play-state: paused; }
 
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+.rise-in {
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes photo-drift {
+  from { transform: scale(1.04); }
+  to { transform: scale(1.1) translate3d(-1.2%, -1%, 0); }
+}
+
+.photo-drift {
+  animation: photo-drift 18s ease-in-out infinite alternate;
+}
+
+.photo-rail {
+  animation: marquee-scroll 72s linear infinite;
+}
+
+.photo-rail-wrap:hover .photo-rail {
+  animation-play-state: paused;
+}
+
+.photo-zoom {
+  transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group:hover .photo-zoom,
+.photo-zoom:hover {
+  transform: scale(1.06);
+}
+
+details[open] > p {
+  animation: rise-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lift {
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 420ms ease;
+}
+
+.lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-elevated);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .route-arc,
   .saving-pulse,
   .marquee-track,
   .flap-top,
-  .flap-bottom {
+  .flap-bottom,
+  .photo-drift,
+  .photo-rail,
+  .rise-in,
+  details[open] > p {
     animation: none !important;
+  }
+
+  .photo-zoom,
+  .group:hover .photo-zoom,
+  .photo-zoom:hover {
+    transition: none;
+    transform: none;
+  }
+
+  .lift,
+  .lift:hover {
+    transition: none;
+    transform: none;
   }
 }

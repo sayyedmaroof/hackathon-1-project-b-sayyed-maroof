@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { RiskLabel } from "@/components/fare/risk-label";
@@ -6,6 +7,7 @@ import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { getHack, listHackSlugs } from "@/lib/api/content";
+import { gallery, photos } from "@/lib/photos";
 
 export function generateStaticParams() {
   return listHackSlugs().map((slug) => ({ slug }));
@@ -33,8 +35,13 @@ export default async function HackPage({
   if (!hack) notFound();
   const t = await getTranslations({ locale, namespace: "common" });
 
+  const cover = photos[gallery[slug.length % gallery.length]];
+
   return (
     <Container className="py-12 md:py-16">
+      <div className="relative mb-8 aspect-[16/7] overflow-hidden rounded-[28px]">
+        <Image src={cover.src} alt={cover.alt} fill priority sizes="(max-width: 1024px) 100vw, 960px" className="object-cover" />
+      </div>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
         <h1 className="font-display text-[clamp(2.8rem,6vw,5.5rem)] leading-[0.95] tracking-[-0.04em]">
           {hack.name}

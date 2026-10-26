@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { PhotoMast } from "@/components/layout/photo-mast";
 import { SampleNote } from "@/components/layout/sample-note";
 import { Button } from "@/components/ui/button";
 import { monthlyPoints, netAnnualValue, pointsGap, recommendPlan, buyPointsAllowed } from "@/lib/agent/gates";
@@ -31,6 +32,7 @@ export function EarnBoard() {
 
   return (
     <div className="space-y-8">
+      <PhotoMast id="cards" />
       <div>
         <h1 className="font-display text-4xl tracking-tight">{t("earnTitle")}</h1>
         <p className="mt-2 text-sm text-ink-muted">{t("earnHelp")}</p>
@@ -53,14 +55,14 @@ export function EarnBoard() {
       </div>
       <p className="text-sm">{widgets("spend")}: {formatMoney(spend)}</p>
       <div className="grid gap-3 md:grid-cols-3">
-        {revolutPlans.map((plan) => {
+        {revolutPlans.map((plan, index) => {
           const credit = plan.id === "ultra";
           const net = netAnnualValue(plan.id, spend, credit);
           return (
-            <article key={plan.id} className="rounded-[24px] border border-line bg-surface p-4">
+            <article key={plan.id} className="lift rise-in rounded-[24px] border border-line bg-surface p-4" style={{ animationDelay: `${index * 0.08}s` }}>
               <h2 className="font-display text-2xl capitalize">{plan.id}</h2>
               <p className="num">{formatMoney(plan.monthlyFee)}</p>
-              <p className="mt-2 text-sm">{formatCount(monthlyPoints(plan.id, spend, credit))} / mes</p>
+              <p className="mt-2 text-sm">{formatCount(monthlyPoints(plan.id, spend, credit))} / month</p>
               <p className="num text-sm">{formatMoney(net)}</p>
             </article>
           );
@@ -86,7 +88,7 @@ export function EarnBoard() {
         ) : (
           <>
             <p className="mt-2 text-sm">
-              {formatCount(owned)} / {formatCount(target)} · {months} meses
+              {formatCount(owned)} / {formatCount(target)} · {months} months
             </p>
             <label className="mt-3 flex min-h-11 items-center gap-2 text-sm">
               <input

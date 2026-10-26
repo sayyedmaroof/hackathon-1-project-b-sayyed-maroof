@@ -1,18 +1,18 @@
 "use client";
 
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Logo } from "@/components/brand/logo";
 import { Container } from "@/components/layout/container";
 import { SampleNote } from "@/components/layout/sample-note";
+import { photos, type PhotoId } from "@/lib/photos";
 import { siteConfig } from "@/lib/site-config";
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 
-/** Site footer with a locale switch. Prices stay in euros. */
+/** Site footer. Prices stay in euros. */
 export function Footer() {
   const t = useTranslations("nav");
   const common = useTranslations("common");
-  const pathname = usePathname();
-  const router = useRouter();
   const columns = [
     {
       title: t("product"),
@@ -35,6 +35,13 @@ export function Footer() {
 
   return (
     <footer className="border-t border-line bg-surface">
+      <div className="grid grid-cols-2 md:grid-cols-4">
+        {(["cards", "window", "wallet", "city"] as PhotoId[]).map((id) => (
+          <div key={id} className="group relative h-28 overflow-hidden md:h-36">
+            <Image src={photos[id].src} alt={photos[id].alt} fill sizes="25vw" className="photo-zoom object-cover" />
+          </div>
+        ))}
+      </div>
       <Container className="grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
           <Logo />
@@ -61,18 +68,6 @@ export function Footer() {
         <p className="text-xs text-ink-muted">© {siteConfig.name}. {t("rights")}</p>
         <div className="flex items-center gap-3">
           <SampleNote />
-          <div className="flex rounded-full border border-line p-1" role="group" aria-label={common("language")}>
-            {(["es", "en"] as const).map((locale) => (
-              <button
-                key={locale}
-                type="button"
-                className="min-h-11 rounded-full px-3 text-sm"
-                onClick={() => router.replace(pathname, { locale })}
-              >
-                {locale.toUpperCase()}
-              </button>
-            ))}
-          </div>
         </div>
       </Container>
     </footer>

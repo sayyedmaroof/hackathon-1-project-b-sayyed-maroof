@@ -10,6 +10,7 @@ export default async function MarketingNotFound() {
       body={t("missingBody")}
       actionHref="/hacks"
       actionLabel={t("learn")}
+      photo="window"
     />
   );
 }

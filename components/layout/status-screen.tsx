@@ -1,6 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
+import { photos, type PhotoId } from "@/lib/photos";
 
 type StatusScreenProps = {
   eyebrow: string;
@@ -8,6 +10,7 @@ type StatusScreenProps = {
   body: string;
   actionHref?: string;
   actionLabel?: string;
+  photo?: PhotoId;
 };
 
 /** Shared layout for loading, empty, missing, and broken routes. */
@@ -17,9 +20,16 @@ export function StatusScreen({
   body,
   actionHref = "/",
   actionLabel = "Back home",
+  photo,
 }: StatusScreenProps) {
+  const still = photo ? photos[photo] : null;
   return (
     <Container className="flex flex-1 flex-col justify-center py-20">
+      {still ? (
+        <div className="rise-in relative mb-8 aspect-[16/7] max-w-3xl overflow-hidden rounded-[28px]">
+          <Image src={still.src} alt={still.alt} fill sizes="768px" className="photo-drift object-cover" />
+        </div>
+      ) : null}
       <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
         {eyebrow}
       </p>

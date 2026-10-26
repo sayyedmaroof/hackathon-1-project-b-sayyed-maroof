@@ -96,7 +96,10 @@
     "checkIberia": "Open an Iberia Club account",
     "checkLink": "Link BA and Qatar",
     "checkSeat": "Check availability",
-    "checkMove": "Transfer Avios"
+    "checkMove": "Transfer Avios",
+    "regenerate": "Regenerate",
+    "copied": "Copied",
+    "shared": "Link copied"
   },
   "widgets": {
     "goal": "Main goal",

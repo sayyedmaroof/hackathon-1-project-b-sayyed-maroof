@@ -13,6 +13,11 @@ import {
   type StoredMessage,
 } from "@/hooks/use-fare-store";
 
+export function withoutLastAssistant(messages: StoredMessage[]) {
+  const last = messages.at(-1);
+  return last?.role === "assistant" ? messages.slice(0, -1) : messages;
+}
+
 function id() {
   return `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
@@ -225,6 +230,19 @@ export function useChat(locale: "es" | "en") {
     [fare],
   );
 
+  const regenerate = useCallback(
+    async (conversationId: string) => {
+      const existing = readFareStore().conversations.find((item) => item.id === conversationId);
+      if (!existing) return;
+      const messages = withoutLastAssistant(existing.messages);
+      if (messages.length === existing.messages.length) return;
+      const next = { ...existing, messages, updatedAt: new Date().toISOString() };
+      persist(next);
+      await consume(next, next.mode);
+    },
+    [consume, persist],
+  );
+
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
   return {
@@ -234,6 +252,7 @@ export function useChat(locale: "es" | "en") {
     send,
     start,
     stop,
+    regenerate,
     confirmAvailability,
     confirmAction,
     pinAward,

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { WidgetView } from "@/components/chat/widget-view";
 import { SkeletonResult } from "@/components/fare/skeleton-result";
 import { Logo } from "@/components/brand/logo";
@@ -183,7 +184,7 @@ export function ChatScreen({
             messages.map((message) => (
               <article
                 key={message.id}
-                className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}
+                className={cn("group flex", message.role === "user" ? "justify-end" : "justify-start")}
               >
                 <div
                   className={cn(
@@ -194,6 +195,7 @@ export function ChatScreen({
                   )}
                 >
                   {message.role === "assistant" ? (
+                    <>
                     <MessageParts
                       parts={message.parts}
                       availabilityShown={availabilityShown}
@@ -207,6 +209,20 @@ export function ChatScreen({
                         if (text?.type === "text") void chat.send(conversation.id, text.text);
                       }}
                     />
+                    <MessageActions
+                      message={message}
+                      isLast={message.id === messages.at(-1)?.id}
+                      streaming={chat.streaming}
+                      onRegenerate={() => void chat.regenerate(conversation.id)}
+                      labels={{
+                        copy: common("copy"),
+                        regenerate: t("regenerate"),
+                        share: common("share"),
+                        copied: t("copied"),
+                        shared: t("shared"),
+                      }}
+                    />
+                    </>
                   ) : (
                     message.parts.map((part, index) =>
                       part.type === "text" ? <p key={index}>{part.text}</p> : null,
@@ -328,6 +344,67 @@ export function ChatScreen({
         </form>
       </section>
       <BoardDrawer conversation={conversation} />
+    </div>
+  );
+}
+
+function MessageActions({
+  message,
+  isLast,
+  streaming,
+  onRegenerate,
+  labels,
+}: {
+  message: { parts: MessagePart[] };
+  isLast: boolean;
+  streaming: boolean;
+  onRegenerate: () => void;
+  labels: { copy: string; regenerate: string; share: string; copied: string; shared: string };
+}) {
+  const text = message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => (part.type === "text" ? part.text : ""))
+    .join("\n")
+    .trim();
+  const control =
+    "inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl px-3 text-sm opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100";
+
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      <button
+        type="button"
+        className={control}
+        aria-label={labels.copy}
+        disabled={!text}
+        onClick={() => {
+          void navigator.clipboard.writeText(text);
+          toast.success(labels.copied);
+        }}
+      >
+        {labels.copy}
+      </button>
+      {isLast ? (
+        <button
+          type="button"
+          className={control}
+          aria-label={labels.regenerate}
+          disabled={streaming}
+          onClick={onRegenerate}
+        >
+          {labels.regenerate}
+        </button>
+      ) : null}
+      <button
+        type="button"
+        className={control}
+        aria-label={labels.share}
+        onClick={() => {
+          void navigator.clipboard.writeText(window.location.href);
+          toast.success(labels.shared);
+        }}
+      >
+        {labels.share}
+      </button>
     </div>
   );
 }

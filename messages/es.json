@@ -96,7 +96,10 @@
     "checkIberia": "Abrir cuenta de Iberia Club",
     "checkLink": "Vincular BA y Qatar",
     "checkSeat": "Comprobar disponibilidad",
-    "checkMove": "Transferir Avios"
+    "checkMove": "Transferir Avios",
+    "regenerate": "Volver a generar",
+    "copied": "Copiado",
+    "shared": "Enlace copiado"
   },
   "widgets": {
     "goal": "Objetivo principal",

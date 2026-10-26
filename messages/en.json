@@ -134,6 +134,8 @@
     "qatar": "Qatar has to be linked first",
     "markDone": "Mark step done",
     "irreversible": "An Avios transfer generally cannot be undone.",
+    "acknowledge": "I understand this can't be undone",
+    "confirmed": "Confirmed. Points stay put until you book on the airline site.",
     "locked": "See the availability and confirm it first. Points do not move before that.",
     "whatHappens": "What will happen",
     "upgrade": "See plans",

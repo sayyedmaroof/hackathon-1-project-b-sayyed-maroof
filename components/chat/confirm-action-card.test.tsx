@@ -1,12 +1,17 @@
 import type { ComponentProps } from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ConfirmActionCard } from "@/components/chat/confirm-action-card";
 import messages from "@/messages/es.json";
 
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn() },
+}));
+
 function renderCard(props: Partial<ComponentProps<typeof ConfirmActionCard>> = {}) {
-  return render(
+  const onConfirm = props.onConfirm ?? vi.fn();
+  render(
     <NextIntlClientProvider locale="es" messages={messages}>
       <ConfirmActionCard
         action="transfer"
@@ -15,10 +20,12 @@ function renderCard(props: Partial<ComponentProps<typeof ConfirmActionCard>> = {
         reversible={false}
         availabilityShown={false}
         userConfirmed={false}
+        onConfirm={onConfirm}
         {...props}
       />
     </NextIntlClientProvider>,
   );
+  return onConfirm;
 }
 
 function confirmButton() {
@@ -31,13 +38,24 @@ describe("ConfirmActionCard", () => {
     expect(confirmButton().disabled).toBe(true);
   });
 
-  it("enables a transfer once both conditions are true", () => {
+  it("stays disabled until the irreversible checkbox is checked", () => {
     renderCard({ availabilityShown: true, userConfirmed: true });
+    expect(confirmButton().disabled).toBe(true);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Entiendo que esto no se puede deshacer" }));
     expect(confirmButton().disabled).toBe(false);
+  });
+
+  it("calls onConfirm once", () => {
+    const onConfirm = renderCard({ availabilityShown: true, userConfirmed: true });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Entiendo que esto no se puede deshacer" }));
+    fireEvent.click(confirmButton());
+    fireEvent.click(confirmButton());
+    expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
   it("keeps a large points purchase disabled", () => {
     renderCard({ action: "buy", availabilityShown: true, userConfirmed: true, gapPoints: 45000 });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Entiendo que esto no se puede deshacer" }));
     expect(confirmButton().disabled).toBe(true);
   });
 });

@@ -134,6 +134,8 @@
     "qatar": "Qatar hay que vincularlo antes",
     "markDone": "Marcar paso hecho",
     "irreversible": "Una transferencia de Avios, en general, no se deshace.",
+    "acknowledge": "Entiendo que esto no se puede deshacer",
+    "confirmed": "Confirmado. Los puntos no se mueven hasta que reserves en la web de la aerolínea.",
     "locked": "Primero hay que ver la disponibilidad y confirmarla. Si no, no se mueven puntos.",
     "whatHappens": "Qué va a pasar",
     "upgrade": "Ver planes",

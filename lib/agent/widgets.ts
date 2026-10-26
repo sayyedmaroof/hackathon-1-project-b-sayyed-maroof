@@ -88,6 +88,7 @@ export const widgetPartSchema = z.discriminatedUnion("type", [
     reversible: z.boolean(),
     summary: z.string(),
     amountLabel: z.string(),
+    gapPoints: z.number().optional(),
     frozen: z.boolean().optional(),
   }),
   z.object({

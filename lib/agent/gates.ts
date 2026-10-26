@@ -33,15 +33,27 @@ export function pointsGap(target: number, owned: number) {
 
 const SMALL_BUY = 15000;
 
-export function transferAllowed(input: { availabilityShown: boolean; userConfirmed: boolean }) {
-  return input.availabilityShown && input.userConfirmed;
-}
-
-export function buyPointsAllowed(input: {
+type TransferGateInput = {
   availabilityShown: boolean;
   userConfirmed: boolean;
-  gapPoints: number;
-}) {
+  acknowledged: boolean;
+};
+
+export function transferAllowed(input: TransferGateInput) {
+  return input.availabilityShown && input.userConfirmed && input.acknowledged;
+}
+
+/**
+ * Throws when the transfer gate is closed.
+ * A real backend must re-check this server-side before moving points.
+ */
+export function assertTransferAllowed(input: TransferGateInput) {
+  if (!transferAllowed(input)) {
+    throw new Error("Transfer is not allowed");
+  }
+}
+
+export function buyPointsAllowed(input: TransferGateInput & { gapPoints: number }) {
   return (
     transferAllowed(input) && input.gapPoints > 0 && input.gapPoints <= SMALL_BUY
   );

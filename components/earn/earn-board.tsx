@@ -14,6 +14,7 @@ export function EarnBoard() {
   const t = useTranslations("pages");
   const widgets = useTranslations("widgets");
   const [parts, setParts] = useState([400, 250, 120, 180, 150]);
+  const [acknowledged, setAcknowledged] = useState(false);
   const spend = parts.reduce((sum, value) => sum + value, 0);
   const advice = recommendPlan(spend);
   const target = useFareStore().store.board[0]?.points ?? 0;
@@ -22,6 +23,7 @@ export function EarnBoard() {
   const canBuy = buyPointsAllowed({
     availabilityShown: target > 0,
     userConfirmed: target > 0,
+    acknowledged,
     gapPoints: gap,
   });
   const categories = t.raw("categories") as string[];
@@ -86,6 +88,14 @@ export function EarnBoard() {
             <p className="mt-2 text-sm">
               {formatCount(owned)} / {formatCount(target)} · {months} meses
             </p>
+            <label className="mt-3 flex min-h-11 items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={acknowledged}
+                onChange={(event) => setAcknowledged(event.target.checked)}
+              />
+              {widgets("acknowledge")}
+            </label>
             <Button type="button" className="mt-3" disabled={!canBuy}>
               {widgets("whatHappens")}
             </Button>

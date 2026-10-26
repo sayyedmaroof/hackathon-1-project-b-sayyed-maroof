@@ -25,6 +25,7 @@ function MessageParts({
   onConfirm,
   onPin,
   onRetry,
+  onConfirmAction,
 }: {
   parts: MessagePart[];
   availabilityShown: boolean;
@@ -32,6 +33,7 @@ function MessageParts({
   onConfirm: () => void;
   onPin: (option: AwardOption) => void;
   onRetry: () => void;
+  onConfirmAction: (action: "transfer" | "buy" | "alert" | "upgrade") => void;
 }) {
   const common = useTranslations("common");
   return (
@@ -68,6 +70,7 @@ function MessageParts({
             availabilityShown={availabilityShown}
             availabilityConfirmed={availabilityConfirmed}
             onConfirmAvailability={onConfirm}
+            onConfirmAction={onConfirmAction}
             onPin={onPin}
           />
         );
@@ -191,6 +194,7 @@ export function ChatScreen({
                       availabilityShown={availabilityShown}
                       availabilityConfirmed={conversation.availabilityConfirmed}
                       onConfirm={() => chat.confirmAvailability(conversation.id)}
+                      onConfirmAction={chat.confirmAction}
                       onPin={(option) => chat.pinAward(option, conversation.mode)}
                       onRetry={() => {
                         const last = [...conversation.messages].reverse().find((item) => item.role === "user");

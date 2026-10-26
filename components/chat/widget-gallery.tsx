@@ -34,6 +34,7 @@ export function WidgetGallery() {
         reversible={false}
         availabilityShown={false}
         userConfirmed={false}
+        onConfirm={() => undefined}
       />
     </div>
   );

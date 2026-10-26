@@ -12,6 +12,7 @@ import { WhyItWorks } from "@/components/fare/why-it-works";
 import { Button } from "@/components/ui/button";
 import { monthlyPoints, netAnnualValue, pointsGap, recommendPlan } from "@/lib/agent/gates";
 import { ConfirmActionCard } from "@/components/chat/confirm-action-card";
+import { useFareStore } from "@/hooks/use-fare-store";
 import type { AwardOption, WidgetPart } from "@/lib/agent/widgets";
 import { formatCount, formatMoney } from "@/lib/format";
 import { revolutPlans } from "@/lib/mock/reference";
@@ -144,15 +145,19 @@ export function WidgetView({
   availabilityConfirmed,
   onConfirmAvailability,
   onPin,
+  onConfirmAction,
 }: {
   widget: WidgetPart;
   availabilityShown: boolean;
   availabilityConfirmed: boolean;
   onConfirmAvailability: () => void;
   onPin: (option: AwardOption) => void;
+  onConfirmAction?: (action: "transfer" | "buy" | "alert" | "upgrade") => void;
 }) {
   const t = useTranslations("widgets");
   const common = useTranslations("common");
+  const fare = useFareStore();
+  const [selectedDate, setSelectedDate] = useState<string>();
 
   if (widget.type === "strategy") {
     return (
@@ -240,8 +245,9 @@ export function WidgetView({
           <div className="mt-3">
             <PriceHeatmap
               cells={widget.cells.map((cell) => ({ date: cell.date, price: cell.points }))}
+              selected={selectedDate}
               formatValue={(points) => formatCount(points)}
-              onSelect={() => onConfirmAvailability()}
+              onSelect={setSelectedDate}
             />
           </div>
           <Button type="button" className="mt-3" onClick={onConfirmAvailability}>
@@ -341,6 +347,9 @@ export function WidgetView({
   }
 
   if (widget.type === "confirm") {
+    const target = fare.store.board[0]?.points ?? 0;
+    const owned = fare.store.wallet.reduce((sum, program) => sum + program.balance, 0);
+    const gap = widget.gapPoints ?? pointsGap(target, owned);
     return (
       <ConfirmActionCard
         action={widget.action}
@@ -349,7 +358,8 @@ export function WidgetView({
         reversible={widget.reversible}
         availabilityShown={availabilityShown}
         userConfirmed={availabilityConfirmed}
-        gapPoints={12000}
+        gapPoints={gap}
+        onConfirm={() => onConfirmAction?.(widget.action)}
       />
     );
   }

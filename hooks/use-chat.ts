@@ -168,6 +168,19 @@ export function useChat(locale: "es" | "en") {
     [fare.store.mode, persist],
   );
 
+  const confirmAction = useCallback(
+    (action: "transfer" | "buy" | "alert" | "upgrade") => {
+      if (action !== "transfer" && action !== "buy") return;
+      fare.update((current) => ({
+        ...current,
+        checklist: current.checklist.map((item) =>
+          item.id === "move" ? { ...item, done: true } : item,
+        ),
+      }));
+    },
+    [fare],
+  );
+
   const confirmAvailability = useCallback(
     (conversationId: string) => {
       fare.update((current) => ({
@@ -222,6 +235,7 @@ export function useChat(locale: "es" | "en") {
     start,
     stop,
     confirmAvailability,
+    confirmAction,
     pinAward,
     streaming: streamingId !== null,
   };

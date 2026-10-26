@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertTransferAllowed,
   buyPointsAllowed,
   monthlyPoints,
   netAnnualValue,
@@ -8,20 +9,29 @@ import {
   usageLevel,
 } from "@/lib/agent/gates";
 
+const closed = { availabilityShown: false, userConfirmed: false, acknowledged: false };
+
 describe("transfer and buy gates", () => {
-  it("keeps a transfer locked until availability is shown and confirmed", () => {
-    expect(transferAllowed({ availabilityShown: false, userConfirmed: false })).toBe(false);
-    expect(transferAllowed({ availabilityShown: true, userConfirmed: false })).toBe(false);
-    expect(transferAllowed({ availabilityShown: false, userConfirmed: true })).toBe(false);
-    expect(transferAllowed({ availabilityShown: true, userConfirmed: true })).toBe(true);
+  it("keeps a transfer locked until availability is shown, confirmed, and acknowledged", () => {
+    expect(transferAllowed({ ...closed })).toBe(false);
+    expect(transferAllowed({ availabilityShown: true, userConfirmed: false, acknowledged: true })).toBe(false);
+    expect(transferAllowed({ availabilityShown: false, userConfirmed: true, acknowledged: true })).toBe(false);
+    expect(transferAllowed({ availabilityShown: true, userConfirmed: true, acknowledged: false })).toBe(false);
+    expect(transferAllowed({ availabilityShown: true, userConfirmed: true, acknowledged: true })).toBe(true);
+  });
+
+  it("throws when a transfer is not allowed", () => {
+    expect(() => assertTransferAllowed(closed)).toThrow(/not allowed/);
   });
 
   it("allows a points purchase only for a small confirmed gap", () => {
-    const open = { availabilityShown: true, userConfirmed: true };
+    const open = { availabilityShown: true, userConfirmed: true, acknowledged: true };
     expect(buyPointsAllowed({ ...open, gapPoints: 12000 })).toBe(true);
     expect(buyPointsAllowed({ ...open, gapPoints: 45000 })).toBe(false);
     expect(buyPointsAllowed({ ...open, gapPoints: 0 })).toBe(false);
-    expect(buyPointsAllowed({ availabilityShown: false, userConfirmed: true, gapPoints: 12000 })).toBe(false);
+    expect(
+      buyPointsAllowed({ availabilityShown: false, userConfirmed: true, acknowledged: true, gapPoints: 12000 }),
+    ).toBe(false);
   });
 });
 

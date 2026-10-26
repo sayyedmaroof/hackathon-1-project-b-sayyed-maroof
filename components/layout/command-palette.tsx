@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { currentUser, logout } from "@/lib/auth/actions";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import {
@@ -32,11 +33,27 @@ export function useCommandPalette() {
 /** Command menu, mounted once inside the locale provider. */
 export function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<{ name: string } | null>(null);
   const router = useRouter();
   const { setTheme, resolvedTheme } = useTheme();
   const t = useTranslations("nav");
   const common = useTranslations("common");
   const fare = useFareStore();
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    currentUser()
+      .then((next) => {
+        if (!cancelled) setUser(next);
+      })
+      .catch(() => {
+        if (!cancelled) setUser(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -62,7 +79,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
     { href: "/pricing", label: common("pricing") },
     { href: "/hacks", label: common("learn") },
     { href: "/settings", label: common("settings") },
-    { href: "/login", label: common("login") },
+    ...(user ? [] : [{ href: "/login", label: common("login") }]),
   ];
 
   return (
@@ -86,6 +103,15 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
             >
               {t("switchMode")}
             </CommandItem>
+            {user ? (
+              <CommandItem
+                onSelect={() => {
+                  void logout();
+                }}
+              >
+                {common("logout")}
+              </CommandItem>
+            ) : null}
           </CommandGroup>
           <CommandSeparator />
           <CommandGroup heading={t("toggleTheme")}>

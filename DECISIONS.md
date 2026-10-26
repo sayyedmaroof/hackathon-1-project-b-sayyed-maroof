@@ -14,7 +14,7 @@ Product calls for the Fareflip preview.
 
 ## v2
 
-- English is the only locale for now. Spanish copy stays in `messages/es.json` and is not routed.
+- English is the default locale, with no prefix. Spanish is available at `/es`.
 - The live tagline is “Turn the fare around.” The Spanish options stay on record: “Dale la vuelta a la tarifa.”, “La tarifa, del revés.”, “Voltea la tarifa.”
 - Money is EUR via `Intl.NumberFormat("es-ES")`. The GBP/USD footer switch is gone.
 - `next-intl` is the i18n layer. The html document lives in `app/[locale]/layout.tsx`, so `locale` is a root param and `i18n/request.ts` can read `next/root-params`. Prerender does not call `cookies()`. `localeDetection` is off, so a first visit stays in Spanish.
@@ -39,3 +39,11 @@ Product calls for the Fareflip preview.
 - The landing hero is a scripted chat. Cash flips into points plus taxes, and that page has no stock photo.
 - Assistant messages can be copied, regenerated, or shared. Regenerate replaces the last reply instead of adding another.
 - The old cash-search controls and the `fareflip:saved-trips` and `fareflip:preferences` keys are gone. Saved trips live on the `fareflip:v2` board.
+
+## Accounts
+
+- Accounts live in Neon Postgres. The Drizzle schema in `lib/db/schema.ts` is the source of the SQL migrations in `drizzle/`.
+- A session is an httpOnly cookie named `ff_session`. The database stores a hash of the token, not the token itself. The same is true for verification and reset links.
+- Verification and password reset mail goes through Brevo. Without `BREVO_API_KEY`, development prints the link instead of sending it.
+- A profile stores language (`en` or `es`) and a home airport. Profile reads and writes take the user id from the session. Chats, the trip board, and the wallet stay in `fareflip:v2`.
+- The product shell stays open without an account. Saving a profile requires a session.

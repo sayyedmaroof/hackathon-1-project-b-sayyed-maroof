@@ -5,12 +5,14 @@ import { Search } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Container } from "@/components/layout/container";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { Button } from "@/components/ui/button";
 import { useCommandPalette } from "@/components/layout/command-palette";
+import { logout } from "@/lib/auth/actions";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
 /** Slim product bar. The phone way around is the bottom tab bar. */
-export function AppHeader() {
+export function AppHeader({ user }: { user: { name: string } | null }) {
   const t = useTranslations("common");
   const pathname = usePathname();
   const { setOpen } = useCommandPalette();
@@ -55,6 +57,18 @@ export function AppHeader() {
             <span className="hidden md:inline">{t("search")}</span>
           </button>
           <ThemeToggle />
+          {user ? (
+            <form action={logout} className="flex items-center gap-2">
+              <span className="hidden max-w-32 truncate text-sm md:inline">{user.name}</span>
+              <Button type="submit" variant="outline" size="sm">
+                {t("logout")}
+              </Button>
+            </form>
+          ) : (
+            <Button variant="outline" size="sm" render={<Link href="/login" />}>
+              {t("login")}
+            </Button>
+          )}
         </div>
       </Container>
     </header>

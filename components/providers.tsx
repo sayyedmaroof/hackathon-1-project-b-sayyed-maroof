@@ -1,5 +1,6 @@
 "use client";
 
+import { CommandPaletteProvider } from "@/components/layout/command-palette";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
@@ -14,8 +15,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <TooltipProvider delay={200}>
-        {children}
-        <Toaster position="top-center" closeButton />
+        <CommandPaletteProvider>
+          {children}
+          <Toaster position="top-center" closeButton />
+        </CommandPaletteProvider>
       </TooltipProvider>
     </ThemeProvider>
   );

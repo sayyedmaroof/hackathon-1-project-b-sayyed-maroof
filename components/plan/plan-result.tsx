@@ -5,11 +5,13 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { DataModeLabel } from '@/components/data-mode-label'
 import { Button } from '@/components/ui/button'
+import { PlanNarration } from '@/components/plan/plan-narration'
 import { PointsChart } from '@/components/plan/points-chart'
 import { ILLUSTRATIVE_RATES_LABEL } from '@/lib/cards/constants'
 import { POINT_CURRENCIES } from '@/lib/cards/currencies'
-import { cashSourceLabel, statusLabel, verdictLabel } from '@/lib/plan/display'
+import { cashSourceLabel, formatPoints, planHeadline, planWindowSchedule, statusLabel, verdictLabel } from '@/lib/plan/display'
 import { formatPlanDate } from '@/lib/plan/dates'
+import { cashVersusHacked, feesFromNetSaving } from '@/lib/plan/value'
 import type { SpendPlan, TripRanking } from '@/lib/plan/types'
 import { formatEuro } from '@/lib/savings'
 import { getTrip, type SampleTrip } from '@/lib/trips/catalog'
@@ -51,14 +53,26 @@ export function PlanResult({
   const next = `${pathname}?${search.toString()}`
   const program = POINT_CURRENCIES[plan.awardCurrency].displayName
   const positive = plan.status === 'on_track' || plan.status === 'ready_now'
-  const headline = positive
-    ? `You can have ${plan.pointsRequired.toLocaleString('en-GB')} ${program} by ${formatPlanDate(plan.readyByDate)}.`
-    : plan.message
+  const windowSchedule = planWindowSchedule(plan.schedule)
+  const reachable = ranking?.reachable ?? []
+  const gap = positive ? Math.max(0, plan.reachableAtReadyBy - plan.pointsRequired) : plan.shortfall
+  const feesEur = feesFromNetSaving({
+    cashEur: plan.cashBaseline.eur,
+    taxesEur: trip.taxesEur,
+    pointsRequired: plan.pointsRequired,
+    currency: plan.awardCurrency,
+    netSavingEur: plan.netSavingEur,
+  })
+  const costs = cashVersusHacked({
+    cashEur: plan.cashBaseline.eur,
+    taxesEur: trip.taxesEur,
+    feesEur,
+  })
 
   return (
     <section className="flex flex-col gap-6">
       <article className="overflow-hidden rounded-[18px] border border-[#d9cbbb] bg-[#2a211b] text-[#fffaf2]">
-        <div className="relative min-h-[240px] overflow-hidden sm:min-h-[300px]">
+        <div className="relative min-h-[200px] overflow-hidden sm:min-h-[240px]">
           {trip?.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={trip.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
@@ -66,82 +80,47 @@ export function PlanResult({
             <div className="absolute inset-0 bg-[#3a2f27]" />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#2a211b] via-[#2a211b]/55 to-transparent" />
-          <div className="relative flex min-h-[240px] flex-col justify-end gap-3 p-6 sm:min-h-[300px] sm:p-8">
+          <div className="relative flex min-h-[200px] flex-col justify-end gap-3 p-6 sm:min-h-[240px] sm:p-8">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="status" aria-live="polite">
+              <span className={positive ? 'status' : 'mock-label'} aria-live="polite">
                 {statusLabel(plan.status)}
               </span>
               <span className={plan.verdict === 'poor' ? 'mock-label' : 'status'}>{verdictLabel(plan.verdict)}</span>
             </div>
             <p className="text-xs font-bold uppercase tracking-[.18em] text-[#d89a70]">
-              {trip ? `${trip.origin} → ${trip.destination}` : plan.tripId}
+              {trip ? `${trip.origin} → ${trip.destination}` : plan.tripId} · {formatPlanDate(travelDate)}
             </p>
             <h2 className="max-w-2xl text-[clamp(1.7rem,3.4vw,2.6rem)] font-semibold leading-[1.1] tracking-[-0.04em]">
               {trip?.destination ?? 'Your trip'}
             </h2>
-            <p className="max-w-2xl text-sm leading-6 text-[#eee4d8] sm:text-base">{headline}</p>
-          </div>
-        </div>
-        <div className="grid gap-4 border-t border-white/10 p-6 sm:grid-cols-3 sm:p-8">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[.16em] text-[#d89a70]">Travel date</p>
-            <p className="mt-2 text-lg font-semibold">{formatPlanDate(travelDate)}</p>
-            <p className="mt-1 text-xs text-[#cbbbae]">Ready {formatPlanDate(plan.readyByDate)}</p>
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[.16em] text-[#d89a70]">Net saving</p>
-            <p className="mt-2 text-lg font-semibold text-[#f0c4a4]">{formatEuro(plan.netSavingEur)}</p>
-            <p className="mt-1 text-xs text-[#cbbbae]">versus {formatEuro(plan.cashBaseline.eur)} cash</p>
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[.16em] text-[#d89a70]">Cash baseline</p>
-            <p className="mt-2 text-lg font-semibold">{cashSourceLabel(plan.cashSource)}</p>
-            <p className="mt-1 text-xs text-[#cbbbae]">
-              {plan.usedUnverifiedData ? ILLUSTRATIVE_RATES_LABEL : `${program} award`}
-            </p>
+            <p className="max-w-2xl text-sm leading-6 text-[#eee4d8] sm:text-base">{planHeadline(plan, program)}</p>
           </div>
         </div>
       </article>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <article className="panel">
-          <p className="metric-index">Points needed</p>
-          <p className="mt-4 text-2xl font-semibold">{plan.pointsRequired.toLocaleString('en-GB')}</p>
-          <p className="mt-1 text-xs text-[#76675c]">{program}</p>
-        </article>
-        <article className="panel">
-          <p className="metric-index">By ready date</p>
-          <p className="mt-4 text-2xl font-semibold">{plan.reachableAtReadyBy.toLocaleString('en-GB')}</p>
-          <p className="mt-1 text-xs text-[#76675c]">
-            {plan.shortfall > 0
-              ? `${plan.shortfall.toLocaleString('en-GB')} short`
-              : `${Math.max(0, plan.reachableAtReadyBy - plan.pointsRequired).toLocaleString('en-GB')} surplus`}
-          </p>
-        </article>
-        <article className="panel">
-          <p className="metric-index">Cash fare</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <article className="rounded-[16px] border-2 border-[#c4b4a4] bg-[#fffaf2] p-6">
+          <p className="text-xs font-bold uppercase tracking-[.16em] text-[#76675c]">Original cost</p>
           {fareLoading ? (
-            <p className="mt-4 h-8 w-28 animate-pulse rounded-md bg-[#eee4d8]" aria-busy="true">
+            <p className="mt-3 h-10 w-32 animate-pulse rounded-md bg-[#eee4d8]" aria-busy="true">
               <span className="sr-only">Checking live fare</span>
             </p>
           ) : (
-            <p className="mt-4 text-2xl font-semibold">{formatEuro(plan.cashBaseline.eur)}</p>
+            <p className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-ink">{formatEuro(costs.realCostEur)}</p>
           )}
-          {plan.cashSource === 'duffel_live' ? (
+          <p className="mt-2 text-sm text-[#76675c]">Pay cash for the ticket · {cashSourceLabel(plan.cashSource)}</p>
+          {plan.cashSource === 'duffel_live' && plan.cashBaseline.fetchedAt ? (
             <p className="mt-1 text-xs text-[#76675c]">
-              {plan.cashBaseline.fetchedAt
-                ? `Live fare checked at ${new Date(plan.cashBaseline.fetchedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
-                : 'Live fare'}
+              Checked {new Date(plan.cashBaseline.fetchedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
             </p>
-          ) : plan.cashSource === 'duffel_test' ? (
-            <div className="mt-1">
+          ) : null}
+          {plan.cashSource === 'duffel_test' ? (
+            <div className="mt-2">
               <DataModeLabel mode="test" />
             </div>
-          ) : (
-            <p className="mt-1 text-xs text-[#76675c]">{fareLoading ? 'Checking live fare…' : 'Sample estimate'}</p>
-          )}
+          ) : null}
           {duffelConfigured ? (
-            <Button className="mt-4 w-full" variant="outline" disabled={fareLoading} onClick={onCheckFare}>
+            <Button className="mt-4" variant="outline" disabled={fareLoading} onClick={onCheckFare}>
               {fareLoading ? 'Checking…' : 'Check live cash fare'}
             </Button>
           ) : null}
@@ -150,46 +129,43 @@ export function PlanResult({
           </p>
           {fareNote ? <p className="mt-2 text-sm text-[#76675c]">{fareNote}</p> : null}
         </article>
+        <article className="rounded-[16px] border-2 border-[#b86632] bg-[#fff6ee] p-6">
+          <p className="text-xs font-bold uppercase tracking-[.16em] text-[#b86632]">Hacked cost</p>
+          <p className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-[#b86632]">{formatEuro(costs.hackedCostEur)}</p>
+          <p className="mt-2 text-sm text-[#76675c]">
+            Award taxes {formatEuro(trip.taxesEur)}
+            {feesEur > 0.5 ? ` + card fees ${formatEuro(feesEur)}` : ''}
+          </p>
+          <p className="mt-3 text-lg font-semibold text-[#2f5d32]">You save {formatEuro(costs.youSaveEur)}</p>
+          {plan.usedUnverifiedData ? <p className="mt-2 text-xs text-[#76675c]">{ILLUSTRATIVE_RATES_LABEL}</p> : null}
+        </article>
       </div>
 
-      <article className="panel">
-        <p className="font-semibold">Month by month</p>
-        <p className="mt-1 text-sm text-[#76675c]">
-          Cumulative {program} versus the {plan.pointsRequired.toLocaleString('en-GB')} target.
-        </p>
-        <div className="mt-4">
-          {plan.schedule.length ? (
-            <PointsChart schedule={plan.schedule} target={plan.pointsRequired} />
-          ) : (
-            <p className="text-sm text-[#76675c]">No earning months in this window — the chart starts when there is time to spend.</p>
-          )}
-        </div>
-        {plan.schedule.length ? (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[420px] text-left text-sm">
-              <thead>
-                <tr className="text-[#76675c]">
-                  <th className="py-2 font-medium">Month</th>
-                  <th className="font-medium">Earned</th>
-                  <th className="font-medium">Cumulative</th>
-                </tr>
-              </thead>
-              <tbody>
-                {plan.schedule.map((row) => (
-                  <tr key={row.date} className="border-t border-[#e1d6c8]">
-                    <td className="py-2">{formatPlanDate(row.date)}</td>
-                    <td>{monthEarned(row).toLocaleString('en-GB')}</td>
-                    <td>{row.cumulativePointsInTripCurrency.toLocaleString('en-GB')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </article>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <article className="panel py-5">
+          <p className="metric-index">Needed</p>
+          <p className="mt-3 text-3xl font-semibold tracking-[-0.03em]">{formatPoints(plan.pointsRequired)}</p>
+          <p className="mt-1 text-xs text-[#76675c]">{program}</p>
+        </article>
+        <article className="panel py-5">
+          <p className="metric-index">By {formatPlanDate(plan.readyByDate)}</p>
+          <p className="mt-3 text-3xl font-semibold tracking-[-0.03em]">{formatPoints(plan.reachableAtReadyBy)}</p>
+          <p className="mt-1 text-xs text-[#76675c]">what this spend earns in time</p>
+        </article>
+        <article className="panel py-5">
+          <p className="metric-index">{positive ? 'Surplus' : 'Short'}</p>
+          <p className={`mt-3 text-3xl font-semibold tracking-[-0.03em] ${positive ? 'text-[#2f5d32]' : 'text-[#8b3a2a]'}`}>
+            {formatPoints(gap)}
+          </p>
+          <p className="mt-1 text-xs text-[#76675c]">{program}</p>
+        </article>
+      </div>
+
+      <PlanNarration plan={plan} trip={trip} travelDate={travelDate} />
 
       <article className="panel overflow-x-auto">
-        <p className="font-semibold">Which card for which spend</p>
+        <p className="font-semibold">Use this card for this spend</p>
+        <p className="mt-1 text-sm text-[#76675c]">Each month until {formatPlanDate(plan.readyByDate)}.</p>
         {plan.assignments.length === 0 ? (
           <p className="mt-3 text-sm text-[#76675c]">
             No spend is assigned yet. Go back to Card and pick one that can earn {program}.
@@ -208,9 +184,9 @@ export function PlanResult({
               {plan.assignments.map((row) => (
                 <tr key={`${row.category}-${row.cardId}`} className="border-t border-[#e1d6c8]">
                   <td className="py-3 capitalize">{row.category}</td>
-                  <td>{formatEuro(row.eur)}</td>
+                  <td className="font-semibold">{formatEuro(row.eur)}</td>
                   <td>{row.cardName}</td>
-                  <td>{row.pointsInTripCurrency.toLocaleString('en-GB')}</td>
+                  <td className="font-semibold">{formatPoints(row.pointsInTripCurrency)}</td>
                 </tr>
               ))}
             </tbody>
@@ -218,55 +194,85 @@ export function PlanResult({
         )}
         {plan.unusedCards.length ? (
           <p className="mt-3 text-sm text-[#76675c]">
-            {plan.unusedCards.map((c) => `${c.name}: ${c.reason}`).join(' · ')}
+            Not used: {plan.unusedCards.map((c) => `${c.name} (${c.reason})`).join(' · ')}
           </p>
         ) : null}
       </article>
 
-      <div>
-        <h3 className="font-semibold">Suggestions</h3>
-        {plan.suggestions.length === 0 ? (
-          <p className="mt-2 text-sm text-[#76675c]">No extra moves needed on this plan.</p>
-        ) : (
+      {plan.suggestions.length ? (
+        <div>
+          <h3 className="font-semibold">What would change the outcome</h3>
           <ul className="mt-3 grid gap-2">
-            {plan.suggestions.map((s) => {
+            {plan.suggestions.slice(0, 3).map((s) => {
               const apply = s.apply
               const applyKey =
                 apply.kind === 'add_card' ? apply.cardId : apply.kind === 'switch_trip' ? apply.tripId : ''
               return (
-              <li
-                key={s.kind + applyKey}
-                className="panel p-4"
-              >
-                <p className="text-xs font-bold uppercase tracking-[.16em] text-[#a39182]">{s.kind.replaceAll('_', ' ')}</p>
-                <p className="mt-2 text-sm leading-6">{s.reason}</p>
-                {apply.kind === 'switch_trip' ? (
-                  <button
-                    type="button"
-                    className="mt-2 min-h-11 text-sm font-semibold text-[#b86632]"
-                    onClick={() => onPickTrip(apply.tripId)}
-                  >
-                    Switch to this trip
-                  </button>
-                ) : null}
-              </li>
-            )})}
+                <li key={s.kind + applyKey} className="panel p-4">
+                  <p className="text-sm leading-6">{s.reason}</p>
+                  {apply.kind === 'switch_trip' ? (
+                    <button
+                      type="button"
+                      className="mt-2 min-h-11 text-sm font-semibold text-[#b86632]"
+                      onClick={() => onPickTrip(apply.tripId)}
+                    >
+                      Switch to this trip
+                    </button>
+                  ) : null}
+                </li>
+              )
+            })}
           </ul>
-        )}
-      </div>
+        </div>
+      ) : null}
 
-      <div>
-        <h3 className="font-semibold">Best value trips you can reach by {formatPlanDate(plan.readyByDate)}</h3>
-        {ranking && !ranking.best ? (
-          <p className="mt-2 text-sm text-[#76675c]">
-            No sample trip beats paying cash with your current cards
+      <article className="panel">
+        <p className="font-semibold">Points through {formatPlanDate(plan.readyByDate)}</p>
+        <p className="mt-1 text-sm text-[#76675c]">
+          This chart is only the months before you fly. The dashed line is the {formatPoints(plan.pointsRequired)} {program}{' '}
+          target.
+        </p>
+        {!positive ? (
+          <p className="mt-2 text-sm text-[#8a4b12]">
+            Months after {formatPlanDate(plan.readyByDate)} are not this trip, so they are not on the chart.
           </p>
         ) : null}
-        {(ranking?.reachable ?? []).length === 0 ? (
-          <p className="mt-2 text-sm text-[#76675c]">None of the sample trips are on track yet with this card and spend.</p>
-        ) : (
+        <div className="mt-4">
+          {windowSchedule.length ? (
+            <PointsChart schedule={windowSchedule} target={plan.pointsRequired} />
+          ) : (
+            <p className="text-sm text-[#76675c]">No earning months in this window.</p>
+          )}
+        </div>
+        {windowSchedule.length > 1 ? (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[420px] text-left text-sm">
+              <thead>
+                <tr className="text-[#76675c]">
+                  <th className="py-2 font-medium">Month</th>
+                  <th className="font-medium">Earned</th>
+                  <th className="font-medium">Cumulative</th>
+                </tr>
+              </thead>
+              <tbody>
+                {windowSchedule.map((row) => (
+                  <tr key={row.date} className="border-t border-[#e1d6c8]">
+                    <td className="py-2">{formatPlanDate(row.date)}</td>
+                    <td>{formatPoints(monthEarned(row))}</td>
+                    <td className="font-semibold">{formatPoints(row.cumulativePointsInTripCurrency)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </article>
+
+      {reachable.length ? (
+        <div>
+          <h3 className="font-semibold">Reachable by {formatPlanDate(plan.readyByDate)}</h3>
           <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-            {(ranking?.reachable ?? []).map((r) => {
+            {reachable.map((r) => {
               const t = r.tripId === trip.id ? trip : getTrip(r.tripId)
               if (!t) return null
               const selected = r.tripId === plan.tripId
@@ -289,25 +295,21 @@ export function PlanResult({
                       <p className="font-semibold">{t.destination}</p>
                       <p className="text-xs text-[#76675c]">{t.label}</p>
                       <p className="mt-2 text-sm font-semibold text-[#b86632]">{formatEuro(r.netSavingEur)}</p>
-                      <p className="text-xs text-[#76675c]">{cashSourceLabel(r.cashSource)}</p>
                     </div>
                   </button>
                 </li>
               )
             })}
           </ul>
-        )}
-      </div>
+        </div>
+      ) : null}
 
       <article className="panel text-sm leading-6">
-        <p className="font-semibold">How to book when you are ready</p>
-        <ol className="mt-2 list-decimal pl-5">
-          <li>Transfer points into {program}. Avios accounts must be 30 days old and personal details must match.</li>
-          <li>
-            Book on the airline site
-            {trip ? ` for ${trip.origin} to ${trip.destination}` : ''}. FareFlip does not book for you.
-          </li>
-        </ol>
+        <p className="font-semibold">When the points are ready</p>
+        <p className="mt-2 text-[#76675c]">
+          Transfer into {program} (Avios accounts must be 30 days old, details matching), then book on the airline site
+          {trip ? ` for ${trip.origin} to ${trip.destination}` : ''}. FareFlip does not book for you.
+        </p>
       </article>
 
       {verified ? (

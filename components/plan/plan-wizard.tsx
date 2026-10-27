@@ -17,6 +17,7 @@ import type { CatalogCardId, PointCurrencyId, RevolutPlanId, UserSpendProfile, U
 import type { CashBaseline } from '@/lib/plan/cash-baseline'
 import { RATE_LIMIT_FARE_NOTE, READY_BY_DAYS_DEFAULT, READY_BY_DAYS_MAX, READY_BY_DAYS_MIN } from '@/lib/plan/constants'
 import { addDaysYmd, formatPlanDate, utcYmd } from '@/lib/plan/dates'
+import { statusLabel } from '@/lib/plan/display'
 import { computeSpendPlan, rankTripsForUser } from '@/lib/plan/engine'
 import { loadCustomTrip, loadGuestWallet, saveCustomTrip, saveGuestWallet } from '@/lib/plan/guest-storage'
 import {
@@ -567,7 +568,7 @@ export function PlanWizard({
           <p className="text-sm">{travelDate || 'No date yet'}</p>
           {plan ? (
             <>
-              <p className="mt-2 font-semibold">{plan.status.replaceAll('_', ' ')}</p>
+              <p className="mt-2 font-semibold">{statusLabel(plan.status)}</p>
               <p className="font-semibold">{formatEuro(plan.netSavingEur)}</p>
             </>
           ) : null}

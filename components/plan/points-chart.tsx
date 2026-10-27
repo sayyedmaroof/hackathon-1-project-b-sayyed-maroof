@@ -1,3 +1,4 @@
+import { formatPlanDate } from '@/lib/plan/dates'
 import type { MonthRow } from '@/lib/plan/types'
 
 export function PointsChart({
@@ -19,8 +20,8 @@ export function PointsChart({
   })
   const targetY = height - pad - (target / max) * (height - pad * 2)
 
-  const first = schedule[0]?.date.slice(0, 7) ?? ''
-  const last = schedule[schedule.length - 1]?.date.slice(0, 7) ?? ''
+  const first = schedule[0]?.date
+  const last = schedule[schedule.length - 1]?.date
 
   return (
     <svg viewBox={`0 0 ${width} ${height + 18}`} className="w-full" role="img" aria-label="Cumulative points versus target">
@@ -34,13 +35,13 @@ export function PointsChart({
         return <circle key={row.date} cx={x} cy={y} r="3" fill="#b86632" />
       })}
       {first ? (
-        <text x={pad} y={height + 12} fontSize="12" fill="#4f433b">
-          {first}
+        <text x={pad} y={height + 12} fontSize="11" fill="#4f433b">
+          {formatPlanDate(first)}
         </text>
       ) : null}
       {last && last !== first ? (
-        <text x={width - pad} y={height + 12} fontSize="12" fill="#4f433b" textAnchor="end">
-          {last}
+        <text x={width - pad} y={height + 12} fontSize="11" fill="#4f433b" textAnchor="end">
+          {formatPlanDate(last)}
         </text>
       ) : null}
     </svg>

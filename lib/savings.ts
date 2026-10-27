@@ -82,6 +82,16 @@ export function whyThisWorks({
   return `${label} on ${chart} returns ${cents} per point after fees — pay cash.`
 }
 
+export function formatMoney(value: number, currency = 'EUR'): string {
+  if (currency === 'EUR') return formatEuro(value)
+  const rounded = Math.round(finite(value))
+  const sign = rounded < 0 ? '-' : ''
+  const digits = Math.abs(rounded)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return `${sign}${currency} ${digits}`
+}
+
 export function formatEuro(value: number): string {
   const rounded = Math.round(finite(value))
   const sign = rounded < 0 ? '-' : ''

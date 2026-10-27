@@ -1,16 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRight, Menu, X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { Button } from '@/components/button'
 import { Logo } from '@/components/logo'
 import { LogoutButton } from '@/components/logout-button'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import type { SessionUser } from '@/lib/auth/types'
 
 export function Header({ user }: { user: SessionUser | null }) {
-  const router = useRouter()
   const [open, setOpen] = useState(false)
   const firstName = user?.name.split(' ')[0]
 
@@ -19,11 +17,17 @@ export function Header({ user }: { user: SessionUser | null }) {
       <div className="mx-auto flex max-w-[1240px] items-center justify-between px-5 py-5 lg:px-8">
         <Logo />
         <nav className="hidden items-center gap-8 text-sm font-medium text-[#66584e] lg:flex">
-          <Link href="/search" className="hover:text-[#2a211b]">
-            Search
-          </Link>
-          <a href="#how">How it works</a>
-          <a href="#inspiration">Travel inspiration</a>
+          <a href="#guide" className="hover:text-[#2a211b]">
+            Spend plan
+          </a>
+          <a href="#how" className="hover:text-[#2a211b]">
+            How it works
+          </a>
+          {user ? (
+            <Link href="/wallet" className="hover:text-[#2a211b]">
+              Wallet
+            </Link>
+          ) : null}
         </nav>
         <div className="hidden items-center gap-3 lg:flex">
           {user ? (
@@ -38,8 +42,8 @@ export function Header({ user }: { user: SessionUser | null }) {
               Sign in
             </Link>
           )}
-          <Button variant="terra" onClick={() => router.push('/search')}>
-            Find my savings <ArrowRight className="size-4" />
+          <Button variant="terra" onClick={() => document.getElementById('guide')?.scrollIntoView({ behavior: 'smooth' })}>
+            Plan my spend
           </Button>
         </div>
         <button
@@ -53,17 +57,17 @@ export function Header({ user }: { user: SessionUser | null }) {
       {open && (
         <div className="mx-5 rounded-2xl border border-[#e1d6c8] bg-[#fffaf2] p-4 shadow-xl lg:hidden">
           <div className="flex flex-col gap-2 text-sm">
-            <Link className="p-3" href="/search" onClick={() => setOpen(false)}>
-              Search
-            </Link>
-            <a className="p-3" href="#how">
-              How it works
+            <a className="p-3" href="#guide" onClick={() => setOpen(false)}>
+              Spend plan
             </a>
-            <a className="p-3" href="#inspiration">
-              Travel inspiration
+            <a className="p-3" href="#how" onClick={() => setOpen(false)}>
+              How it works
             </a>
             {user ? (
               <>
+                <Link className="p-3" href="/wallet" onClick={() => setOpen(false)}>
+                  Wallet
+                </Link>
                 <Link className="p-3" href="/bookings" onClick={() => setOpen(false)}>
                   {firstName ? `Hi, ${firstName}` : 'Bookings'}
                 </Link>
@@ -77,11 +81,11 @@ export function Header({ user }: { user: SessionUser | null }) {
             <Button
               variant="terra"
               onClick={() => {
-                router.push('/search')
+                document.getElementById('guide')?.scrollIntoView({ behavior: 'smooth' })
                 setOpen(false)
               }}
             >
-              Find my savings <ArrowRight className="size-4" />
+              Plan my spend
             </Button>
           </div>
         </div>

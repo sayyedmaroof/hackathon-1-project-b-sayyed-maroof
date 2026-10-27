@@ -19,9 +19,29 @@ Curated Spanish-market card and loyalty data lives under [`lib/cards/`](lib/card
 
 Do not log wallet payloads or put balances in URLs.
 
+## Duffel cash fares
+
+Search creates an offer request with `return_offers=false`, then lists offers sorted by `total_amount`. Booking re-fetches the offer, pays the Duffel `total_amount` from that response, and sends `offer.passengers[].id` on each order passenger. Test tokens (`duffel_test_`) show sandbox fares; live tokens cannot create orders unless `DUFFEL_ALLOW_LIVE_BOOKING=true`.
+
+`npm run check:duffel` prints only the data mode, offer count, and cheapest price. It never prints the API key.
+
+### Test-mode routes (manual)
+
+From [Duffel: Test your integration](https://duffel.com/docs/api/overview/test-your-integration). Use one-way searches:
+
+| Scenario | Origin | Destination |
+| --- | --- | --- |
+| No offers | PVD | RAI |
+| Supplier timeout | STN | LHR |
+| Offer no longer available | LGW | LHR |
+| Offer price change | LHR | STN |
+| Order creation error | LHR | LGW |
+| Insufficient balance | LGW | STN |
+
 ## Scripts
 
 - `npm run dev` — development server
 - `npm run build` — production build
 - `npm test` — Vitest unit tests
 - `npm run db:migrate` — apply Drizzle migrations
+- `npm run check:duffel` — one Duffel test search (LHR–JFK, 30 days ahead)

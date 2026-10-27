@@ -1,0 +1,12 @@
+{
+  "errors": [
+    {
+      "type": "rate_limit_error",
+      "code": "rate_limit_exceeded",
+      "title": "Rate limit exceeded",
+      "message": "Too many requests hit the API too quickly."
+    }
+  ],
+  "request_id": "req_test_429",
+  "status": 429
+}

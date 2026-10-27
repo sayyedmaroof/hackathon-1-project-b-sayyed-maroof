@@ -5,7 +5,9 @@ import { ShellLayout } from '@/components/shell-layout'
 import { db } from '@/lib/db'
 import { bookings } from '@/lib/db/schema'
 import { getCurrentUser } from '@/lib/auth/current-user'
-import { formatEuro } from '@/lib/savings'
+import { DataModeLabel, sandboxCopy } from '@/components/data-mode-label'
+import type { DataMode } from '@/lib/providers/types'
+import { formatEuro, formatMoney } from '@/lib/savings'
 
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
@@ -30,12 +32,28 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         Reference <strong className="text-[#2a211b]">{booking.providerRef}</strong>
       </p>
       <dl className="panel mt-8 flex flex-col gap-3 text-sm">
-        <Row label="Provider" value={booking.provider === 'duffel' ? 'Duffel (test)' : 'Award guide'} />
+        <Row
+          label="Provider"
+          value={
+            booking.provider === 'duffel'
+              ? booking.dataMode === 'live'
+                ? 'Duffel'
+                : 'Duffel (test)'
+              : 'Award guide'
+          }
+        />
         <Row label="Depart" value={booking.departDate} />
         <Row label="Return" value={booking.returnDate} />
         <Row label="Cabin" value={booking.cabin} />
-        <Row label="Cash reference price" value={formatEuro(Number(booking.cashPrice))} />
-        <Row label="You saved" value={formatEuro(Number(booking.savingEur))} accent />
+        <Row label="Cash reference price" value={formatMoney(Number(booking.cashPrice), booking.currency ?? 'EUR')} />
+        <Row
+          label={sandboxCopy((booking.dataMode as DataMode | null) ?? undefined) ? 'Sandbox difference' : 'You saved'}
+          value={formatMoney(Number(booking.savingEur), booking.currency ?? 'EUR')}
+          accent
+        />
+        <div className="pt-1">
+          <DataModeLabel mode={(booking.dataMode as DataMode | null) ?? undefined} />
+        </div>
       </dl>
       <Link href="/bookings" className="mt-6 inline-flex min-h-11 items-center text-sm font-semibold text-[#b86632]">
         Back to bookings

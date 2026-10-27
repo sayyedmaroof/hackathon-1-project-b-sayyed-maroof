@@ -15,7 +15,7 @@ export default async function LoginPage({
   if (user) redirect(next)
 
   return (
-    <AuthFormShell title="Sign in" subtitle="Book flights and track your savings.">
+    <AuthFormShell title="Sign in" subtitle="Save your wallet. Spend planning does not require an account.">
       <LoginForm next={rawNext ? next : undefined} />
     </AuthFormShell>
   )

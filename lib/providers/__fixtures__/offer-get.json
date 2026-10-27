@@ -1,0 +1,9 @@
+{
+  "data": {
+    "id": "off_test_cheapest",
+    "expires_at": "2099-01-01T10:00:00Z",
+    "total_amount": "120.50",
+    "total_currency": "EUR",
+    "passengers": [{ "id": "pas_test_1" }]
+  }
+}

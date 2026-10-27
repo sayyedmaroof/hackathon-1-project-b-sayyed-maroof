@@ -7,6 +7,7 @@ export type CashBaseline = {
   source: CashBaselineSource
   fetchedAt?: string
   note?: string
+  rateLimited?: boolean
 }
 
 export type LiveCashFare = {

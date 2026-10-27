@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { ShellLayout } from '@/components/shell-layout'
 import { getTotalSaved, getUserBookings } from '@/app/actions/booking'
 import { getCurrentUser } from '@/lib/auth/current-user'
 import { DataModeLabel, sandboxCopy } from '@/components/data-mode-label'
@@ -15,7 +14,7 @@ export default async function BookingsPage() {
   const totalSaved = await getTotalSaved(user.id)
 
   return (
-    <ShellLayout user={user}>
+    <>
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-4xl font-semibold tracking-[-.06em]">Your bookings</h1>
@@ -64,6 +63,6 @@ export default async function BookingsPage() {
           ))
         )}
       </div>
-    </ShellLayout>
+    </>
   )
 }

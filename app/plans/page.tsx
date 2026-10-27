@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { listSavedPlans } from '@/app/actions/saved-plans'
-import { ShellLayout } from '@/components/shell-layout'
+import { DeletePlanButton } from '@/components/plan/delete-plan-button'
 import { getCurrentUser } from '@/lib/auth/current-user'
 import { cashSourceLabel } from '@/lib/plan/display'
 import { formatPlanDate } from '@/lib/plan/dates'
@@ -15,7 +15,7 @@ export default async function SavedPlansPage() {
   if (!user.emailVerifiedAt) redirect('/verify-email/sent')
   const rows = await listSavedPlans()
   return (
-    <ShellLayout user={user}>
+    <>
       <p className="eyebrow">Your library</p>
       <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -51,7 +51,7 @@ export default async function SavedPlansPage() {
             return (
               <li key={row.id}>
                 <Link
-                  href={`/plan?trip=${encodeURIComponent(row.tripId)}&date=${encodeURIComponent(row.travelDate)}&ready=${row.readyByDays}&view=plan`}
+                  href={`/plan?saved=${encodeURIComponent(row.id)}&trip=${encodeURIComponent(row.tripId)}&date=${encodeURIComponent(row.travelDate)}&ready=${row.readyByDays}&view=plan`}
                   className="block overflow-hidden rounded-[18px] border border-[#d9cbbb] bg-[#fffaf2] transition hover:-translate-y-0.5 hover:border-[#b86632]"
                 >
                   <div className="relative h-44 overflow-hidden bg-[#eee4d8]">
@@ -78,15 +78,18 @@ export default async function SavedPlansPage() {
                     <p className="mt-4 text-2xl font-semibold text-[#b86632]">{formatEuro(Number(row.netSavingEur))}</p>
                     <p className="mt-1 text-xs text-[#76675c]">{cashSourceLabel(source)} net saving</p>
                     <span className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-[#b86632]">
-                      View plan
+                      Open
                     </span>
                   </div>
                 </Link>
+                <div className="px-5 pb-5">
+                  <DeletePlanButton id={row.id} />
+                </div>
               </li>
             )
           })}
         </ul>
       )}
-    </ShellLayout>
+    </>
   )
 }

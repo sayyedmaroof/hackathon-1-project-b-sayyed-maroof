@@ -93,6 +93,7 @@ export const savedPlans = pgTable('saved_plans', {
   cashSource: text('cash_source').notNull(),
   fetchedAt: timestamp('fetched_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  inputs: jsonb('inputs').$type<Record<string, unknown> | null>(),
 })
 
 export {

@@ -11,7 +11,8 @@ import { checkRateLimit } from '@/lib/auth/rate-limit'
 import { safeNextPath } from '@/lib/auth/next-path'
 import { logInSchema, resendSchema, signUpSchema } from '@/lib/auth/schemas'
 import { createSession, destroySession, getClientIp } from '@/lib/auth/session'
-import { sendVerificationEmail } from '@/lib/email/brevo'
+import { sendAccountExistsEmail, sendVerificationEmail } from '@/lib/email/brevo'
+import { RESEND_MESSAGE } from '@/lib/auth/constants'
 
 const LOGIN_ERROR = 'Invalid email or password'
 
@@ -22,6 +23,25 @@ function dummyUnknownEmailHash() {
 }
 
 export type AuthState = { error?: string; message?: string }
+
+function verifySentPath(email: string) {
+  return `/verify-email/sent?email=${encodeURIComponent(email)}`
+}
+
+async function sendSignupEmail(opts: {
+  email: string
+  userId: string
+  verified: boolean
+  isNew: boolean
+}) {
+  const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
+  if (opts.isNew || !opts.verified) {
+    const token = await createEmailVerificationToken(opts.userId)
+    await sendVerificationEmail(opts.email, `${appUrl}/verify-email?token=${encodeURIComponent(token)}`)
+    return
+  }
+  await sendAccountExistsEmail(opts.email)
+}
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const ip = await getClientIp()
@@ -36,18 +56,27 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Invalid input' }
 
   const { email, password, name } = parsed.data
-  const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
+  const existing = await db
+    .select({ id: users.id, emailVerifiedAt: users.emailVerifiedAt })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1)
+  const passwordHash = await hashPassword(password)
+
   if (existing[0]) {
-    return { message: 'If this email is new, check your inbox to verify your account.' }
+    await sendSignupEmail({
+      email,
+      userId: existing[0].id,
+      verified: Boolean(existing[0].emailVerifiedAt),
+      isNew: false,
+    })
+    redirect(verifySentPath(email))
   }
 
-  const passwordHash = await hashPassword(password)
   const inserted = await db.insert(users).values({ email, passwordHash, name }).returning({ id: users.id })
   const userId = inserted[0]!.id
-  const token = await createEmailVerificationToken(userId)
-  const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
-  await sendVerificationEmail(email, `${appUrl}/verify-email?token=${encodeURIComponent(token)}`)
-  redirect(`/verify-email/sent?email=${encodeURIComponent(email)}`)
+  await sendSignupEmail({ email, userId, verified: false, isNew: true })
+  redirect(verifySentPath(email))
 }
 
 export async function logIn(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -92,21 +121,20 @@ export async function resendVerification(_prev: AuthState, formData: FormData): 
   const parsed = resendSchema.safeParse({ email: formData.get('email') })
   if (!parsed.success) return { error: 'Enter a valid email.' }
 
-  const rows = await db.select().from(users).where(eq(users.email, parsed.data.email)).limit(1)
+  const rows = await db
+    .select({ id: users.id, email: users.email, emailVerifiedAt: users.emailVerifiedAt })
+    .from(users)
+    .where(eq(users.email, parsed.data.email))
+    .limit(1)
   const user = rows[0]
   if (user && !user.emailVerifiedAt) {
     const token = await createEmailVerificationToken(user.id)
     const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
     await sendVerificationEmail(user.email, `${appUrl}/verify-email?token=${encodeURIComponent(token)}`)
+  } else if (user?.emailVerifiedAt) {
+    await sendAccountExistsEmail(user.email)
   }
-  return { message: 'If an unverified account exists, we sent a new link.' }
-}
-
-export async function verifyEmailToken(token: string): Promise<{ ok: boolean; reason?: string }> {
-  if (!token) return { ok: false, reason: 'missing' }
-  const result = await consumeEmailVerificationToken(token)
-  if (!result.ok) return { ok: false, reason: result.reason }
-  return { ok: true }
+  return { message: RESEND_MESSAGE }
 }
 
 export async function confirmEmailVerification(formData: FormData): Promise<void> {

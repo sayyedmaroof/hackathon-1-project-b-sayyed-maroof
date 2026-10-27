@@ -2,21 +2,32 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { getCashBaseline, getCashBaselines } from '@/app/actions/cash-baseline'
+import { getCashBaseline, getCashBaselines, getCustomCashBaseline } from '@/app/actions/cash-baseline'
 import { saveBalances, saveSpendProfile, saveWallet } from '@/app/actions/wallet'
 import { savePlan } from '@/app/actions/saved-plans'
 import { CardTile } from '@/components/plan/card-tile'
 import { CustomTripFields } from '@/components/plan/custom-trip-fields'
 import { PlanResult } from '@/components/plan/plan-result'
-import { Button } from '@/components/button'
-import { CARD_CATALOG, getCatalogCard } from '@/lib/cards/catalog'
+import { Button } from '@/components/ui/button'
+import { Stepper } from '@/components/ui/stepper'
+import Image from 'next/image'
+import { CARD_CATALOG } from '@/lib/cards/catalog'
 import { SAMPLE_SPEND_PROFILE } from '@/lib/cards/constants'
-import { POINT_CURRENCIES } from '@/lib/cards/currencies'
 import type { CatalogCardId, PointCurrencyId, RevolutPlanId, UserSpendProfile, UserWallet } from '@/lib/cards/types'
 import type { CashBaseline } from '@/lib/plan/cash-baseline'
-import { READY_BY_DAYS_DEFAULT, READY_BY_DAYS_MAX, READY_BY_DAYS_MIN } from '@/lib/plan/constants'
+import { RATE_LIMIT_FARE_NOTE, READY_BY_DAYS_DEFAULT, READY_BY_DAYS_MAX, READY_BY_DAYS_MIN } from '@/lib/plan/constants'
+import { addDaysYmd, formatPlanDate, utcYmd } from '@/lib/plan/dates'
 import { computeSpendPlan, rankTripsForUser } from '@/lib/plan/engine'
 import { loadCustomTrip, loadGuestWallet, saveCustomTrip, saveGuestWallet } from '@/lib/plan/guest-storage'
+import {
+  assignedSummary,
+  formatThousands,
+  parseSpendInput,
+  putRestInOther,
+  setMonthlyTotal,
+  setSpendCategory,
+  type SpendCategoryField,
+} from '@/lib/plan/spend'
 import { formatEuro } from '@/lib/savings'
 import {
   CUSTOM_TRIP_ID,
@@ -26,12 +37,9 @@ import {
   getTrip,
   isCustomTripComplete,
 } from '@/lib/trips/catalog'
+import { programBalanceRows, toggleCardId, walletCardsFromSelection } from '@/lib/plan/wizard-state'
 
 const STEPS = ['Card', 'Trip', 'Spend', 'Plan'] as const
-
-function spendTotal(s: UserSpendProfile) {
-  return s.groceriesEur + s.travelEur + s.diningEur + s.fuelEur + s.otherEur
-}
 
 export function PlanWizard({
   duffelConfigured,
@@ -55,7 +63,9 @@ export function PlanWizard({
   const searchParams = useSearchParams()
   const readyFromUrl = Number(initialReadyBy)
   const [step, setStep] = useState(initialViewPlan ? 3 : 0)
-  const [cardId, setCardId] = useState<CatalogCardId | null>(initialWallet.cards[0]?.cardId ?? null)
+  const [selectedCardIds, setSelectedCardIds] = useState<CatalogCardId[]>(
+    initialWallet.cards.map((c) => c.cardId),
+  )
   const [revolutPlan, setRevolutPlan] = useState<RevolutPlanId>(
     initialWallet.cards.find((c) => c.cardId === 'revolut')?.revolutPlan ?? 'premium',
   )
@@ -82,19 +92,19 @@ export function PlanWizard({
   const [guestHydrated, setGuestHydrated] = useState(false)
   const fareReq = useRef(0)
   const hydrated = useRef(false)
+  const fareChecked = useRef(new Set<string>())
+  const [raisedTotal, setRaisedTotal] = useState(false)
 
   const wallet: UserWallet = useMemo(
     () => ({
-      cards: cardId
-        ? [{ cardId, revolutPlan: cardId === 'revolut' ? revolutPlan : null }]
-        : [],
+      cards: walletCardsFromSelection(selectedCardIds, revolutPlan),
       balances: Object.entries(balances).map(([currency, balance]) => ({
         currency: currency as PointCurrencyId,
         balance: Number(balance) || 0,
       })),
-      spend: { ...spend, monthlyTotalEur: spendTotal(spend) },
+      spend,
     }),
-    [cardId, revolutPlan, balances, spend],
+    [selectedCardIds, revolutPlan, balances, spend],
   )
 
   const customTrip = useMemo(() => buildCustomTrip(customDraft), [customDraft])
@@ -125,7 +135,7 @@ export function PlanWizard({
     if (!verified) {
       const guest = loadGuestWallet()
       if (guest) {
-        setCardId(guest.cards[0]?.cardId ?? null)
+        setSelectedCardIds(guest.cards.map((c) => c.cardId))
         const rev = guest.cards.find((c) => c.cardId === 'revolut')?.revolutPlan
         if (rev) setRevolutPlan(rev)
         setSpend(guest.spend)
@@ -167,35 +177,58 @@ export function PlanWizard({
     router.replace(`${pathname}?${qs}`, { scroll: false })
   }, [tripId, travelDate, readyBy, step, pathname, router, searchParams])
 
-  useEffect(() => {
-    setBaselines({})
-    setFareNote('')
-  }, [tripId, travelDate])
+  const programs = useMemo(() => programBalanceRows(selectedCardIds), [selectedCardIds])
+  const spendSummary = assignedSummary(spend)
 
-  const programs = useMemo(() => {
-    if (!cardId) return []
-    const card = getCatalogCard(cardId)
-    return card ? [card.currency] : []
-  }, [cardId])
-
-  async function checkLiveFare() {
-    if (!duffelConfigured || !travelDate || tripId === CUSTOM_TRIP_ID) return
+  async function checkLiveFare(force = false) {
+    if (!duffelConfigured || !travelDate) return
+    if (tripId === CUSTOM_TRIP_ID && !customReady) return
+    const key = `${tripId}|${travelDate}|${trip.originIata}|${trip.destinationIata}`
+    if (!force && fareChecked.current.has(key) && baselines[tripId]) return
     const id = ++fareReq.current
     setFareLoading(true)
     setFareNote('')
     try {
-      const selected = await getCashBaseline({ tripId, travelDate })
+      const selected =
+        tripId === CUSTOM_TRIP_ID
+          ? await getCustomCashBaseline({
+              originIata: trip.originIata,
+              destinationIata: trip.destinationIata,
+              origin: trip.origin,
+              destination: trip.destination,
+              cabin: trip.cabin === 'Business' ? 'Business' : 'Economy',
+              journey: trip.journey,
+              travelDate,
+              typicalCashEur: trip.typicalCashEur,
+              taxesEur: trip.taxesEur,
+            })
+          : await getCashBaseline({ tripId, travelDate })
       if (id !== fareReq.current) return
+      fareChecked.current.add(key)
       setBaselines((prev) => ({ ...prev, [tripId]: selected }))
-      if (selected.note && selected.source === 'sample') setFareNote(selected.note)
+      if (tripId === CUSTOM_TRIP_ID && selected.source === 'duffel_live') {
+        setCustomDraft((d) => ({ ...d, typicalCashEur: selected.eur }))
+      }
+      if (selected.rateLimited || selected.note === RATE_LIMIT_FARE_NOTE) {
+        setFareNote(RATE_LIMIT_FARE_NOTE)
+      } else if (selected.note && selected.source === 'sample') {
+        setFareNote(selected.note)
+      }
+      const cachedIds = Object.keys(baselines).concat(tripId)
       const top = (ranking?.reachable ?? [])
         .map((r) => r.tripId)
-        .filter((tid) => tid !== tripId && getTrip(tid))
+        .filter((tid) => tid !== tripId && getTrip(tid) && !cachedIds.includes(tid))
         .slice(0, 3)
       if (top.length) {
-        const extra = await getCashBaselines(top.map((tid) => ({ tripId: tid, travelDate })))
+        const extra = await getCashBaselines(
+          top.map((tid) => ({ tripId: tid, travelDate })),
+          { skipTripIds: cachedIds },
+        )
         if (id !== fareReq.current) return
         setBaselines((prev) => ({ ...prev, ...extra }))
+        if (Object.values(extra).some((b) => b.rateLimited || b.note === RATE_LIMIT_FARE_NOTE)) {
+          setFareNote(RATE_LIMIT_FARE_NOTE)
+        }
       }
     } catch {
       if (id !== fareReq.current) return
@@ -206,57 +239,70 @@ export function PlanWizard({
   }
 
   useEffect(() => {
-    if (!duffelConfigured || !travelDate || step < 1 || tripId === CUSTOM_TRIP_ID) return
+    if (!duffelConfigured || !travelDate || step !== 3) return
+    if (tripId === CUSTOM_TRIP_ID && !customReady) return
     const t = window.setTimeout(() => {
       void checkLiveFare()
-    }, 600)
+    }, 1200)
     return () => window.clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tripId, travelDate, duffelConfigured])
+  }, [step, tripId, travelDate, duffelConfigured, customReady, trip.originIata, trip.destinationIata, trip.cabin, trip.journey])
 
-  const mismatch = spend.monthlyTotalEur > 0 && spendTotal(spend) !== spend.monthlyTotalEur
+  const tomorrow = addDaysYmd(utcYmd(new Date()), 1)
+  const readyByDateLabel = travelDate ? formatPlanDate(addDaysYmd(travelDate, -readyBy)) : null
+  const cardsOk = selectedCardIds.length > 0
+  const tripOk = Boolean(travelDate) && customReady
+  const canOpenStep = (i: number) => {
+    if (i <= step) return true
+    if (i >= 1 && !cardsOk) return false
+    if (i >= 2 && !tripOk) return false
+    return true
+  }
 
   return (
     <div className="relative pb-32 lg:pb-10">
       <div className="mb-6">
         <p className="eyebrow">Spend plan</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">Plan your spend</h1>
-        <ol className="mt-4 flex flex-wrap gap-2">
-          {STEPS.map((label, i) => (
-            <li key={label}>
-              <button
-                type="button"
-                className={`min-h-11 rounded-full px-4 text-sm font-semibold ${
-                  i === step ? 'bg-[#2a211b] text-white' : 'bg-[#eee4d8] text-[#66584e]'
-                }`}
-                onClick={() => setStep(i)}
-              >
-                {i + 1}. {label}
-              </button>
-            </li>
-          ))}
-        </ol>
+        <Stepper
+          steps={STEPS.map((label, i) => ({
+            label,
+            state: i === step ? 'current' : i < step ? 'done' : canOpenStep(i) ? 'done' : 'locked',
+            summary:
+              i === 0
+                ? selectedCardIds.length
+                  ? `${selectedCardIds.length} cards`
+                  : undefined
+                : i === 1
+                  ? travelDate
+                    ? `${trip.origin} to ${trip.destination}, ${formatPlanDate(travelDate)}`
+                    : undefined
+                  : undefined,
+            onSelect: canOpenStep(i) ? () => setStep(i) : undefined,
+          }))}
+        />
+        {!verified && guestHydrated ? <p className="mt-2 text-sm text-ink-muted">Saved on this device</p> : null}
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
         <div>
           {step === 0 ? (
             <section>
-              <h2 className="text-xl font-semibold">Select your card</h2>
+              <h2 className="text-xl font-semibold">Select your cards</h2>
               <p className="mt-1 text-sm text-[#76675c]">
-                Choose one card from the catalog. Source: A una milla de tu destino.{' '}
+                Choose every card you already hold. Source: A una milla de tu destino.{' '}
                 <a className="underline" href="https://aunamilladetudestino.com/tarjetas-de-credito/">
                   Cards page
                 </a>
               </p>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2" role="radiogroup" aria-label="Card selection">
+              <div className="mt-4 grid gap-4 sm:grid-cols-2" aria-label="Card selection">
                 {CARD_CATALOG.map((card) => (
                   <CardTile
                     key={card.id}
                     card={card}
-                    selected={cardId === card.id}
+                    selected={selectedCardIds.includes(card.id)}
                     revolutPlan={revolutPlan}
-                    onSelect={() => setCardId(card.id)}
+                    onSelect={() => setSelectedCardIds((ids) => toggleCardId(ids, card.id))}
                     onPlan={setRevolutPlan}
                   />
                 ))}
@@ -272,16 +318,19 @@ export function PlanWizard({
                 <button
                   type="button"
                   onClick={() => setTripId(CUSTOM_TRIP_ID)}
-                  className={`min-h-11 overflow-hidden rounded-2xl border border-dashed text-left ${
-                    tripId === CUSTOM_TRIP_ID ? 'border-[#b86632] bg-[#fffaf2]' : 'border-[#cbbbae] bg-[#f7f2e9]'
+                  className={`min-h-11 rounded-2xl border border-dashed text-left ${
+                    tripId === CUSTOM_TRIP_ID
+                      ? 'border-primary bg-[#fff6ee] ring-2 ring-primary'
+                      : 'border-border bg-background'
                   }`}
+                  aria-pressed={tripId === CUSTOM_TRIP_ID}
                 >
                   <div className="flex h-32 items-center justify-center bg-[#eee4d8]">
                     <p className="text-sm font-semibold text-[#b86632]">Custom trip</p>
                   </div>
                   <div className="p-4">
                     <p className="font-semibold">Enter your own route</p>
-                    <p className="text-xs text-[#76675c]">Airport codes, cabin, points and a cash estimate you provide.</p>
+                    <p className="text-xs text-ink-muted">Your own numbers, not checked.</p>
                   </div>
                 </button>
                 {TRIP_CATALOG.map((t) => {
@@ -292,23 +341,33 @@ export function PlanWizard({
                       key={t.id}
                       type="button"
                       onClick={() => setTripId(t.id)}
-                      className={`min-h-11 overflow-hidden rounded-2xl border text-left ${
-                        tripId === t.id ? 'border-[#b86632]' : 'border-[#e1d6c8]'
+                      className={`min-h-11 rounded-2xl border text-left ${
+                        tripId === t.id
+                          ? 'border-primary bg-[#fff6ee] shadow-[0_0_0_3px_var(--primary)]'
+                          : 'border-border bg-surface'
                       }`}
+                      aria-pressed={tripId === t.id}
                     >
+                      <div className="overflow-hidden rounded-[calc(1rem-1px)]">
                       {t.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={t.image} alt="" className="h-32 w-full object-cover" />
+                        <Image src={t.image} alt="" width={640} height={256} className="h-32 w-full object-cover" sizes="(max-width: 768px) 100vw, 40vw" />
                       ) : (
-                        <div className="h-32 bg-[#eee4d8]" />
+                        <div className="h-32 bg-background" />
                       )}
                       <div className="p-4">
+                        {tripId === t.id ? (
+                          <p className="mb-2 text-xs font-bold uppercase tracking-[.16em] text-primary">Selected</p>
+                        ) : null}
                         <p className="font-semibold">{t.label}</p>
-                        <p className="text-xs text-[#76675c]">{t.note}</p>
+                        <p className="text-xs text-ink-muted">
+                          {t.origin} → {t.destination} · {t.cabin} · {t.journey === 'return' ? 'return' : 'one-way'}
+                        </p>
+                        <p className="mt-1 text-xs text-ink-muted">{t.pointsRequired.toLocaleString('en-GB')} points</p>
                         <p className="mt-2 text-sm">
                           Typical cash (sample) {formatEuro(t.typicalCashEur)}
                           {live?.source === 'duffel_live' ? ` · live ${formatEuro(cash)}` : ''}
                         </p>
+                      </div>
                       </div>
                     </button>
                   )
@@ -327,11 +386,20 @@ export function PlanWizard({
                 Travel date
                 <input
                   type="date"
-                  className="mt-1 min-h-11 w-full rounded-xl border border-[#e1d6c8] px-3"
+                  min={tomorrow}
+                  className="mt-1 min-h-11 w-full rounded-xl border border-border px-3"
                   value={travelDate}
                   onChange={(e) => setTravelDate(e.target.value)}
                 />
               </label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => setTravelDate(addDaysYmd(tomorrow, 120))}>
+                  In 4 months
+                </Button>
+                <Button variant="outline" onClick={() => setTravelDate(addDaysYmd(tomorrow, 240))}>
+                  In 8 months
+                </Button>
+              </div>
               <label className="mt-4 block text-sm font-semibold">
                 Ready by {readyBy} days before travel
                 <input
@@ -343,6 +411,11 @@ export function PlanWizard({
                   className="mt-2 w-full min-h-11"
                 />
               </label>
+              {readyByDateLabel ? (
+                <p className="mt-2 text-sm text-ink-muted">
+                  Points ready by {readyByDateLabel}, {readyBy} days before you fly
+                </p>
+              ) : null}
             </section>
           ) : null}
 
@@ -353,51 +426,71 @@ export function PlanWizard({
                 {programs.length === 0 ? (
                   <p className="text-sm text-[#76675c]">Select cards first to enter balances.</p>
                 ) : (
-                  programs.map((id) => (
-                    <label key={id} className="text-sm font-semibold">
-                      {POINT_CURRENCIES[id].displayName}
+                  programs.map((row) => (
+                    <label key={row.currency} className="text-sm font-semibold">
+                      {row.programName}
+                      <p className="font-normal text-[#76675c]">
+                        From {row.cardNames.join(', ')}
+                      </p>
                       <input
                         type="number"
                         min={0}
                         className="mt-1 min-h-11 w-full rounded-xl border border-[#e1d6c8] px-3"
-                        value={balances[id] ?? 0}
+                        value={balances[row.currency] ?? 0}
                         onChange={(e) =>
-                          setBalances((b) => ({ ...b, [id]: Number(e.target.value) || 0 }))
+                          setBalances((b) => ({ ...b, [row.currency]: Number(e.target.value) || 0 }))
                         }
                       />
                     </label>
                   ))
                 )}
               </div>
+              <p className="mt-4 text-sm text-[#76675c]">Skip balances if you are starting from zero.</p>
               <Button
                 className="mt-4"
                 variant="outline"
-                onClick={() => setSpend({ ...SAMPLE_SPEND_PROFILE, monthlyTotalEur: spendTotal(SAMPLE_SPEND_PROFILE) })}
+                onClick={() => {
+                  setSpend(SAMPLE_SPEND_PROFILE)
+                  setRaisedTotal(false)
+                }}
               >
                 Typical household EUR 1,500
               </Button>
+              <EuroSpendField
+                label="Monthly total"
+                value={spend.monthlyTotalEur}
+                onChange={(n) => {
+                  setSpend((s) => setMonthlyTotal(s, n))
+                  setRaisedTotal(false)
+                }}
+              />
               {(['groceriesEur', 'travelEur', 'diningEur', 'fuelEur', 'otherEur'] as const).map((key) => (
-                <label key={key} className="mt-3 block text-sm font-semibold capitalize">
-                  {key.replace('Eur', '')}
-                  <input
-                    type="number"
-                    min={0}
-                    className="mt-1 min-h-11 w-full rounded-xl border border-[#e1d6c8] px-3"
-                    value={spend[key]}
-                    onChange={(e) =>
-                      setSpend((s) => {
-                        const next = { ...s, [key]: Number(e.target.value) || 0 }
-                        return { ...next, monthlyTotalEur: spendTotal(next) }
-                      })
-                    }
-                  />
-                </label>
+                <EuroSpendField
+                  key={key}
+                  label={key.replace('Eur', '')}
+                  value={spend[key]}
+                  onChange={(n) => {
+                    setSpend((s) => {
+                      const next = setSpendCategory(s, key as SpendCategoryField, n)
+                      setRaisedTotal(next.raisedTotal)
+                      return next.spend
+                    })
+                  }}
+                />
               ))}
               <p className="mt-3 text-sm">
-                Categories {formatEuro(spendTotal(spend))} · monthly total {formatEuro(spend.monthlyTotalEur || spendTotal(spend))}
+                EUR {formatThousands(spendSummary.assigned)} of EUR {formatThousands(spendSummary.total)} assigned
+                {spendSummary.remainder > 0 ? ` · ${formatEuro(spendSummary.remainder)} unassigned` : ''}
               </p>
-              {mismatch ? (
-                <p className="text-sm text-[#b86632]">Category amounts must add up to the monthly total.</p>
+              {spendSummary.remainder > 0 ? (
+                <Button className="mt-2" variant="outline" onClick={() => setSpend((s) => putRestInOther(s))}>
+                  Put the rest in Other
+                </Button>
+              ) : null}
+              {raisedTotal ? (
+                <p className="mt-2 text-sm text-[#b86632]">
+                  Categories were higher than the monthly total, so the total was raised to match.
+                </p>
               ) : null}
             </section>
           ) : null}
@@ -413,12 +506,12 @@ export function PlanWizard({
                 ranking={ranking}
                 trip={trip}
                 travelDate={travelDate}
-                duffelConfigured={duffelConfigured && tripId !== CUSTOM_TRIP_ID}
+                duffelConfigured={duffelConfigured}
                 fareLoading={fareLoading}
                 fareNote={fareNote}
                 verified={verified}
                 saveMessage={saveMessage}
-                onCheckFare={() => void checkLiveFare()}
+                onCheckFare={() => void checkLiveFare(true)}
                 onSave={async () => {
                   const res = await savePlan({
                     tripId,
@@ -444,23 +537,40 @@ export function PlanWizard({
               </Button>
             ) : null}
             {step < 3 ? (
-              <Button
-                variant="terra"
-                disabled={step === 1 && !customReady}
-                onClick={() => setStep((s) => s + 1)}
-              >
-                Continue
-              </Button>
+              <div>
+                <Button
+                  variant="terra"
+                  disabled={(step === 0 && !cardsOk) || (step === 1 && !tripOk)}
+                  onClick={() => setStep((s) => s + 1)}
+                >
+                  Continue
+                </Button>
+                {step === 0 && !cardsOk ? (
+                  <p className="mt-2 text-sm text-ink-muted">Pick at least one card</p>
+                ) : null}
+                {step === 1 && !travelDate ? (
+                  <p className="mt-2 text-sm text-ink-muted">Pick a travel date</p>
+                ) : null}
+              </div>
             ) : null}
           </div>
         </div>
 
         <aside className="lg:sticky lg:top-24 hidden h-fit rounded-2xl border border-[#e1d6c8] bg-[#fffaf2] p-4 lg:block">
-          <p className="text-xs font-bold uppercase tracking-[.2em] text-[#a39182]">Summary</p>
-          <p className="mt-2 text-sm">{cardId ? getCatalogCard(cardId)?.name : 'No card yet'}</p>
+          <p className="text-xs font-bold uppercase tracking-[.2em] text-ink-muted">Summary</p>
+          <p className="mt-2 text-sm">
+            {selectedCardIds.length
+              ? `${selectedCardIds.length} card${selectedCardIds.length === 1 ? '' : 's'}`
+              : 'No cards yet'}
+          </p>
           <p className="text-sm">{trip.label}</p>
           <p className="text-sm">{travelDate || 'No date yet'}</p>
-          {plan ? <p className="mt-2 font-semibold">{formatEuro(plan.netSavingEur)}</p> : null}
+          {plan ? (
+            <>
+              <p className="mt-2 font-semibold">{plan.status.replaceAll('_', ' ')}</p>
+              <p className="font-semibold">{formatEuro(plan.netSavingEur)}</p>
+            </>
+          ) : null}
         </aside>
       </div>
 
@@ -471,7 +581,7 @@ export function PlanWizard({
           </p>
           <Button
             variant="terra"
-            disabled={step === 1 && !customReady}
+            disabled={(step === 0 && !cardsOk) || (step === 1 && !tripOk)}
             onClick={() => setStep((s) => s + 1)}
           >
             Continue
@@ -479,5 +589,65 @@ export function PlanWizard({
         </div>
       ) : null}
     </div>
+  )
+}
+
+function EuroSpendField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: number
+  onChange: (n: number) => void
+}) {
+  const [focused, setFocused] = useState(false)
+  const [draft, setDraft] = useState(String(value))
+  useEffect(() => {
+    if (!focused) setDraft(formatThousands(value))
+  }, [value, focused])
+  return (
+    <label className="mt-3 block text-sm font-semibold capitalize">
+      {label}
+      <span className="mt-1 flex min-h-11 items-center gap-2">
+        <button
+          type="button"
+          className="min-h-11 min-w-11 rounded-xl border border-[#e1d6c8]"
+          onClick={() => onChange(Math.max(0, value - 10))}
+          aria-label={`Decrease ${label}`}
+        >
+          −
+        </button>
+        <span className="flex min-h-11 flex-1 items-center rounded-xl border border-[#e1d6c8] px-3">
+          <span className="pr-2 text-[#76675c]">EUR</span>
+          <input
+            inputMode="numeric"
+            className="min-h-11 w-full bg-transparent outline-none"
+            value={focused ? draft : formatThousands(value)}
+            onFocus={() => {
+              setFocused(true)
+              setDraft(value ? String(value) : '')
+            }}
+            onBlur={() => {
+              setFocused(false)
+              onChange(parseSpendInput(draft))
+            }}
+            onChange={(e) => {
+              const next = e.target.value.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '')
+              setDraft(next)
+              onChange(parseSpendInput(next))
+            }}
+          />
+        </span>
+        <button
+          type="button"
+          className="min-h-11 min-w-11 rounded-xl border border-[#e1d6c8]"
+          onClick={() => onChange(value + 10)}
+          aria-label={`Increase ${label}`}
+        >
+          +
+        </button>
+      </span>
+    </label>
   )
 }

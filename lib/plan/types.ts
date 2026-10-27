@@ -13,13 +13,33 @@ export type SuggestionKind =
   | 'cheaper_trip'
   | 'pay_cash'
 
+export type SuggestionApply =
+  | { kind: 'reallocate' }
+  | { kind: 'add_card'; cardId: CatalogCardId }
+  | { kind: 'top_up'; points: number }
+  | { kind: 'switch_trip'; tripId: string }
+  | { kind: 'pay_cash' }
+
+export type SuggestionAfter = {
+  status: PlanStatus
+  netSavingEur: number
+  targetDate?: string
+  monthsSaved?: number
+  extraPointsPerMonth?: number
+  extraPointsOneOff?: number
+}
+
+export type SuggestionDelta = {
+  statusImproved: boolean
+  netSavingEur: number
+}
+
 export type PlanSuggestion = {
   kind: SuggestionKind
   reason: string
-  netSavingEur: number
-  extraPoints?: number
-  cardId?: CatalogCardId
-  tripId?: string
+  after: SuggestionAfter
+  delta: SuggestionDelta
+  apply: SuggestionApply
 }
 
 export type MonthRow = {
@@ -27,6 +47,7 @@ export type MonthRow = {
   date: string
   pointsEarnedByCard: Record<string, number>
   cumulativePointsInTripCurrency: number
+  projected?: boolean
 }
 
 export type SpendPlan = {
@@ -38,6 +59,8 @@ export type SpendPlan = {
   shortfall: number
   reachableAtReadyBy: number
   monthTargetReached: number | null
+  targetReachedDate: string | null
+  monthsLate: number | null
   assignments: CategoryAssignment[]
   unusedCards: UnusedCard[]
   schedule: MonthRow[]

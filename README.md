@@ -61,12 +61,22 @@ From [Duffel: Test your integration](https://duffel.com/docs/api/overview/test-y
 
 ## Database
 
-Migrations are append-only. Older tables (`searches`, booking `award_guide` provider) remain in the schema and are unused by the new flow. `saved_plans` stores an optional snapshot for verified users (trip, date, ready-by days, net saving, cash source, fetchedAt). No offer ids.
+The Neon client in [`lib/db/index.ts`](lib/db/index.ts) is created on first use. Importing it never throws. `getCurrentUser` returns null when there is no session cookie and also returns null if the database is unreachable (it logs a message without secrets). Guest routes (`/`, `/plan`, `/login`, `/signup`) render with no `DATABASE_URL` and no `DUFFEL_API_KEY`. `/plans` redirects to login.
+
+Migrations are append-only. Older tables (`searches`, booking `award_guide` provider) remain in the schema and are unused by the new flow. `saved_plans` stores trip, date, ready-by days, **server-computed** net saving, cash source, fetchedAt, and an `inputs` JSON snapshot (card ids, balances, spend) so a plan can be reopened. No offer ids.
+
+## Language
+
+UI copy lives in [`lib/i18n`](lib/i18n) (`en` and `es`). English is the default. The header has an ES/EN toggle that sets `document.documentElement.lang`.
+
+## Legal
+
+[`/privacy`](app/privacy/page.tsx) and [`/terms`](app/terms/page.tsx) cover illustrative rates, guest localStorage, account data, and Duffel as a cash-fare source only.
 
 ## Scripts
 
 - `npm run dev` — development server
-- `npm run build` — production build (must pass with no env vars)
+- `npm run build` — production build (must pass with no env vars; try `env -u DATABASE_URL -u DUFFEL_API_KEY npm run build`)
 - `npm test` — Vitest
 - `npm run db:migrate` — apply Drizzle migrations
 - `npm run check:duffel` — one Duffel test search (LHR–JFK, 30 days ahead)

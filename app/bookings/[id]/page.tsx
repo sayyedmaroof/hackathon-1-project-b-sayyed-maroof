@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { eq, and } from 'drizzle-orm'
 import { notFound, redirect } from 'next/navigation'
-import { ShellLayout } from '@/components/shell-layout'
 import { db } from '@/lib/db'
 import { bookings } from '@/lib/db/schema'
 import { getCurrentUser } from '@/lib/auth/current-user'
@@ -23,7 +22,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   if (!booking) notFound()
 
   return (
-    <ShellLayout user={user}>
+    <>
       <p className="eyebrow">Booking confirmed</p>
       <h1 className="mt-2 text-3xl font-semibold tracking-[-.04em]">
         {booking.origin} → {booking.destination}
@@ -58,7 +57,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       <Link href="/bookings" className="mt-6 inline-flex min-h-11 items-center text-sm font-semibold text-[#b86632]">
         Back to bookings
       </Link>
-    </ShellLayout>
+    </>
   )
 }
 

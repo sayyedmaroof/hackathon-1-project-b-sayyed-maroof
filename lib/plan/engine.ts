@@ -2,9 +2,9 @@ import { CARD_CATALOG, getCatalogCard } from '@/lib/cards/catalog'
 import { convertBalances } from '@/lib/cards/convert'
 import { TRANSFER_EDGES } from '@/lib/cards/transfers'
 import { TOP_UP_EUR_PER_POINT, WELCOME_BONUS_MONTHS } from '@/lib/cards/constants'
-import type { UserWallet } from '@/lib/cards/types'
+import type { CatalogCardId, UserBalance, UserWallet } from '@/lib/cards/types'
 import type { SampleTrip } from '@/lib/trips/catalog'
-import { TRIP_CATALOG } from '@/lib/trips/catalog'
+import { getTrip, TRIP_CATALOG } from '@/lib/trips/catalog'
 import { allocateTowardTrip } from './allocate'
 import { cashBaselineForTrip, type CashBaseline } from './cash-baseline'
 import {
@@ -14,10 +14,27 @@ import {
   READY_BY_DAYS_MIN,
   TOP_UP_MAX_SHORTFALL_RATIO,
 } from './constants'
-import { addDaysYmd, parseYmd, utcYmd, wholeMonthsBetween } from './dates'
+import { addDaysYmd, formatPlanDate, parseYmd, utcYmd, wholeMonthsBetween } from './dates'
 import { transferPathRatio } from './path'
-import type { MonthRow, PlanStatus, PlanSuggestion, SpendPlan, TripRanking } from './types'
-import { netSavingUnclamped, planWindowFeesEur, verdictFor } from './value'
+import { categorySum } from './spend'
+import type {
+  MonthRow,
+  PlanStatus,
+  PlanSuggestion,
+  SpendPlan,
+  SuggestionAfter,
+  TripRanking,
+} from './types'
+import { cardWindowFeeEur, netSavingUnclamped, planWindowFeesEur, verdictFor } from './value'
+
+const MAX_EXTRA_MONTHS = 36
+
+const STATUS_RANK: Record<PlanStatus, number> = {
+  unreachable: 0,
+  short: 1,
+  on_track: 2,
+  ready_now: 3,
+}
 
 export type BuildPlanInput = {
   trip: SampleTrip
@@ -27,6 +44,7 @@ export type BuildPlanInput = {
   readyByDaysBefore?: number
   cashBaseline?: CashBaseline
   cashBaselines?: Record<string, CashBaseline>
+  includeSuggestions?: boolean
 }
 
 function clampReadyBy(days: number | undefined): number {
@@ -43,7 +61,86 @@ function monthDate(today: Date, index: number): string {
   return utcYmd(d)
 }
 
+function usedCardIds(assignments: SpendPlan['assignments']): CatalogCardId[] {
+  return [...new Set(assignments.filter((a) => a.eur > 0).map((a) => a.cardId))]
+}
+
+function mergeUnused(
+  wallet: UserWallet,
+  unusedFromAlloc: SpendPlan['unusedCards'],
+  used: CatalogCardId[],
+  months: number,
+): SpendPlan['unusedCards'] {
+  const usedSet = new Set(used)
+  const byId = new Map(unusedFromAlloc.map((u) => [u.cardId, { ...u }]))
+  for (const uc of wallet.cards) {
+    if (usedSet.has(uc.cardId)) continue
+    const existing = byId.get(uc.cardId)
+    const fee = cardWindowFeeEur(uc, months)
+    const feeNote =
+      fee > 0 ? 'not counted, card not used for this trip' : 'not counted, card not used for this trip'
+    if (existing) {
+      if (!existing.reason.includes('does not help')) existing.reason = feeNote
+      else if (!existing.reason.includes('not counted')) {
+        existing.reason = `${existing.reason}; ${feeNote}`
+      }
+    } else {
+      const card = getCatalogCard(uc.cardId)
+      byId.set(uc.cardId, {
+        cardId: uc.cardId,
+        name: card?.name ?? uc.cardId,
+        reason: feeNote,
+      })
+    }
+  }
+  return [...byId.values()]
+}
+
+function month0(today: Date, starting: number): MonthRow {
+  return {
+    monthIndex: 0,
+    date: monthDate(today, 0),
+    pointsEarnedByCard: {},
+    cumulativePointsInTripCurrency: starting,
+    projected: false,
+  }
+}
+
+function finishPlan(
+  input: BuildPlanInput,
+  base: Omit<SpendPlan, 'suggestions' | 'verdict' | 'cashSource' | 'cashBaseline' | 'netSavingEur'> & {
+    netSavingEur?: number
+  },
+  cashBaseline: CashBaseline,
+  withSuggestions: boolean,
+): SpendPlan {
+  const used = usedCardIds(base.assignments)
+  const fees = planWindowFeesEur(input.wallet.cards, base.monthsAvailable, used)
+  const netSavingEur = netSavingUnclamped({
+    cashEur: cashBaseline.eur,
+    taxesEur: input.trip.taxesEur,
+    pointsRequired: input.trip.pointsRequired,
+    currency: input.trip.awardCurrency,
+    feesEur: fees,
+  })
+  const unusedCards = mergeUnused(input.wallet, base.unusedCards, used, base.monthsAvailable)
+  const plan: SpendPlan = {
+    ...base,
+    unusedCards,
+    netSavingEur,
+    verdict: verdictFor(netSavingEur, cashBaseline.eur),
+    cashSource: cashBaseline.source,
+    cashBaseline,
+    suggestions: [],
+  }
+  if (withSuggestions) {
+    plan.suggestions = buildSuggestions(input, plan)
+  }
+  return plan
+}
+
 export function computeSpendPlan(input: BuildPlanInput): SpendPlan {
+  const withSuggestions = input.includeSuggestions !== false
   const readyByDays = clampReadyBy(input.readyByDaysBefore)
   const cashBaseline =
     input.cashBaseline ?? cashBaselineForTrip(input.trip, input.cashBaselines)
@@ -60,41 +157,31 @@ export function computeSpendPlan(input: BuildPlanInput): SpendPlan {
     converted.usedUnverifiedTransfers ||
     input.wallet.cards.some((c) => getCatalogCard(c.cardId)?.verified === false)
 
-  const empty = (
-    status: PlanStatus,
-    message: string,
-    extra: Partial<SpendPlan> = {},
-  ): SpendPlan => {
+  const empty = (status: PlanStatus, message: string, extra: Partial<SpendPlan> = {}): SpendPlan => {
     const monthsAvailable = extra.monthsAvailable ?? 0
-    const fees = planWindowFeesEur(input.wallet.cards, monthsAvailable)
-    const netSavingEur = netSavingUnclamped({
-      cashEur: cashBaseline.eur,
-      taxesEur: input.trip.taxesEur,
-      pointsRequired: input.trip.pointsRequired,
-      currency: input.trip.awardCurrency,
-      feesEur: fees,
-    })
-    return {
-      tripId: input.trip.id,
-      status,
-      message,
-      monthsAvailable,
-      readyByDate: extra.readyByDate ?? todayYmd,
-      shortfall: Math.max(0, input.trip.pointsRequired - converted.reachable),
-      reachableAtReadyBy: extra.reachableAtReadyBy ?? converted.reachable,
-      monthTargetReached: extra.monthTargetReached ?? null,
-      assignments: allocation.assignments,
-      unusedCards: allocation.unusedCards,
-      schedule: extra.schedule ?? [],
-      netSavingEur,
-      verdict: verdictFor(netSavingEur, cashBaseline.eur),
-      cashSource: cashBaseline.source,
+    return finishPlan(
+      input,
+      {
+        tripId: input.trip.id,
+        status,
+        message,
+        monthsAvailable,
+        readyByDate: extra.readyByDate ?? todayYmd,
+        shortfall: Math.max(0, input.trip.pointsRequired - converted.reachable),
+        reachableAtReadyBy: extra.reachableAtReadyBy ?? converted.reachable,
+        monthTargetReached: extra.monthTargetReached ?? null,
+        targetReachedDate: extra.targetReachedDate ?? null,
+        monthsLate: extra.monthsLate ?? null,
+        assignments: allocation.assignments,
+        unusedCards: allocation.unusedCards,
+        schedule: extra.schedule ?? [month0(input.today, converted.reachable)],
+        usedUnverifiedData,
+        pointsRequired: input.trip.pointsRequired,
+        awardCurrency: input.trip.awardCurrency,
+      },
       cashBaseline,
-      suggestions: extra.suggestions ?? [],
-      usedUnverifiedData,
-      pointsRequired: input.trip.pointsRequired,
-      awardCurrency: input.trip.awardCurrency,
-    }
+      withSuggestions,
+    )
   }
 
   if (!travel) {
@@ -107,52 +194,39 @@ export function computeSpendPlan(input: BuildPlanInput): SpendPlan {
   const readyByDate = addDaysYmd(input.travelDate, -readyByDays)
   const readyBy = parseYmd(readyByDate) ?? travel
   const monthsAvailable = wholeMonthsBetween(input.today, readyBy)
+  const startRow = month0(input.today, converted.reachable)
 
   if (converted.reachable >= input.trip.pointsRequired) {
-    const fees = planWindowFeesEur(input.wallet.cards, monthsAvailable)
-    const netSavingEur = netSavingUnclamped({
-      cashEur: cashBaseline.eur,
-      taxesEur: input.trip.taxesEur,
-      pointsRequired: input.trip.pointsRequired,
-      currency: input.trip.awardCurrency,
-      feesEur: fees,
-    })
-    const suggestions = buildSuggestions({
-      trip: input.trip,
-      wallet: input.wallet,
-      allocationMonthly: allocation.monthlyPointsInTrip,
-      shortfall: 0,
-      netSavingEur,
-      monthsAvailable,
-      status: 'ready_now',
-    })
-    return {
-      tripId: input.trip.id,
-      status: 'ready_now',
-      message: 'You already have enough points for this trip.',
-      monthsAvailable,
-      readyByDate,
-      shortfall: 0,
-      reachableAtReadyBy: converted.reachable,
-      monthTargetReached: 0,
-      assignments: allocation.assignments,
-      unusedCards: allocation.unusedCards,
-      schedule: [],
-      netSavingEur,
-      verdict: verdictFor(netSavingEur, cashBaseline.eur),
-      cashSource: cashBaseline.source,
+    return finishPlan(
+      input,
+      {
+        tripId: input.trip.id,
+        status: 'ready_now',
+        message: 'You already have enough points for this trip.',
+        monthsAvailable,
+        readyByDate,
+        shortfall: 0,
+        reachableAtReadyBy: converted.reachable,
+        monthTargetReached: 0,
+        targetReachedDate: startRow.date,
+        monthsLate: 0,
+        assignments: allocation.assignments,
+        unusedCards: allocation.unusedCards,
+        schedule: [startRow],
+        usedUnverifiedData,
+        pointsRequired: input.trip.pointsRequired,
+        awardCurrency: input.trip.awardCurrency,
+      },
       cashBaseline,
-      suggestions,
-      usedUnverifiedData,
-      pointsRequired: input.trip.pointsRequired,
-      awardCurrency: input.trip.awardCurrency,
-    }
+      withSuggestions,
+    )
   }
 
   if (monthsAvailable === 0) {
     return empty('unreachable', 'The ready-by date is too close to earn more points.', {
       readyByDate,
       monthsAvailable: 0,
+      schedule: [startRow],
     })
   }
 
@@ -160,206 +234,267 @@ export function computeSpendPlan(input: BuildPlanInput): SpendPlan {
     return empty('unreachable', 'Add at least one card to build a spend plan.', {
       readyByDate,
       monthsAvailable,
+      schedule: [startRow],
     })
   }
 
-  const profileSpend =
-    input.wallet.spend.groceriesEur +
-    input.wallet.spend.travelEur +
-    input.wallet.spend.diningEur +
-    input.wallet.spend.fuelEur +
-    input.wallet.spend.otherEur
+  const profileSpend = categorySum(input.wallet.spend)
   if (profileSpend <= 0 || allocation.monthlyPointsInTrip <= 0) {
     return empty('unreachable', 'There is no earning spend on cards that help this trip.', {
       readyByDate,
       monthsAvailable,
+      schedule: [startRow],
     })
   }
 
-  const balances = input.wallet.balances.map((b) => ({ ...b }))
-  const schedule: MonthRow[] = []
+  const balances: UserBalance[] = input.wallet.balances.map((b) => ({ ...b }))
+  const schedule: MonthRow[] = [startRow]
   let monthTargetReached: number | null = null
+  let targetReachedDate: string | null = null
   let reachableAtReadyBy = converted.reachable
+  const byCardEarn: Record<string, number> = {}
+  for (const row of allocation.assignments) {
+    byCardEarn[row.cardId] = (byCardEarn[row.cardId] ?? 0) + row.pointsInTripCurrency
+  }
 
-  for (let i = 0; i < monthsAvailable; i++) {
+  const totalMonths = monthsAvailable + MAX_EXTRA_MONTHS
+  for (let i = 0; i < totalMonths; i++) {
     for (const [currency, pts] of allocation.monthlyEarnByCurrency) {
       const existing = balances.find((b) => b.currency === currency)
       if (existing) existing.balance += pts
       else balances.push({ currency, balance: pts })
     }
     const { reachable } = convertBalances(balances, TRANSFER_EDGES, input.trip.awardCurrency)
-    reachableAtReadyBy = reachable
-    const byCard: Record<string, number> = {}
-    for (const row of allocation.assignments) {
-      byCard[row.cardId] = (byCard[row.cardId] ?? 0) + row.pointsInTripCurrency
-    }
+    const projected = i >= monthsAvailable
+    if (!projected) reachableAtReadyBy = reachable
+    const date = monthDate(input.today, i + 1)
     schedule.push({
-      monthIndex: i,
-      date: monthDate(input.today, i),
-      pointsEarnedByCard: byCard,
+      monthIndex: i + 1,
+      date,
+      pointsEarnedByCard: { ...byCardEarn },
       cumulativePointsInTripCurrency: reachable,
+      projected,
     })
     if (monthTargetReached == null && reachable >= input.trip.pointsRequired) {
       monthTargetReached = i + 1
+      targetReachedDate = date
+      if (projected) break
     }
   }
 
   const shortfall = Math.max(0, input.trip.pointsRequired - reachableAtReadyBy)
   let status: PlanStatus
   let message: string
-  if (shortfall === 0) {
+  let monthsLate: number | null = null
+
+  if (shortfall === 0 || (monthTargetReached != null && monthTargetReached <= monthsAvailable)) {
     status = 'on_track'
-    message = `You can have ${input.trip.pointsRequired.toLocaleString('en-GB')} points by your ready-by date.`
-  } else if (monthTargetReached != null) {
-    status = 'on_track'
-    message = `You reach the target in month ${monthTargetReached}.`
+    message =
+      monthTargetReached != null
+        ? `You reach the target in month ${monthTargetReached}.`
+        : `You can have ${input.trip.pointsRequired.toLocaleString('en-GB')} points by your ready-by date.`
+    monthsLate = 0
+  } else if (monthTargetReached != null && targetReachedDate) {
+    monthsLate = Math.max(0, monthTargetReached - monthsAvailable)
+    status = 'short'
+    const lateLabel = monthsLate === 1 ? '1 month' : `${monthsLate} months`
+    message = `You would reach it on ${formatPlanDate(targetReachedDate)}, ${lateLabel} after your ready-by date`
   } else {
-    const extraMonths =
-      allocation.monthlyPointsInTrip > 0
-        ? Math.ceil(shortfall / allocation.monthlyPointsInTrip)
-        : Infinity
-    if (Number.isFinite(extraMonths) && extraMonths < 36) {
-      status = 'short'
-      message = `Short by ${shortfall.toLocaleString('en-GB')} points at the ready-by date.`
-    } else {
-      status = 'unreachable'
-      message = 'This trip is out of reach with the current spend and cards.'
-    }
+    status = 'unreachable'
+    message = 'This trip is out of reach with the current spend and cards.'
   }
 
-  const fees = planWindowFeesEur(input.wallet.cards, monthsAvailable)
-  const netSavingEur = netSavingUnclamped({
-    cashEur: cashBaseline.eur,
-    taxesEur: input.trip.taxesEur,
-    pointsRequired: input.trip.pointsRequired,
-    currency: input.trip.awardCurrency,
-    feesEur: fees,
-  })
-
-  const suggestions = buildSuggestions({
-    trip: input.trip,
-    wallet: input.wallet,
-    allocationMonthly: allocation.monthlyPointsInTrip,
-    shortfall,
-    netSavingEur,
-    monthsAvailable,
-    status,
-  })
-
-  return {
-    tripId: input.trip.id,
-    status,
-    message,
-    monthsAvailable,
-    readyByDate,
-    shortfall,
-    reachableAtReadyBy,
-    monthTargetReached,
-    assignments: allocation.assignments,
-    unusedCards: allocation.unusedCards,
-    schedule,
-    netSavingEur,
-    verdict: verdictFor(netSavingEur, cashBaseline.eur),
-    cashSource: cashBaseline.source,
+  return finishPlan(
+    input,
+    {
+      tripId: input.trip.id,
+      status,
+      message,
+      monthsAvailable,
+      readyByDate,
+      shortfall,
+      reachableAtReadyBy,
+      monthTargetReached,
+      targetReachedDate,
+      monthsLate,
+      assignments: allocation.assignments,
+      unusedCards: allocation.unusedCards,
+      schedule,
+      usedUnverifiedData,
+      pointsRequired: input.trip.pointsRequired,
+      awardCurrency: input.trip.awardCurrency,
+    },
     cashBaseline,
-    suggestions,
-    usedUnverifiedData,
-    pointsRequired: input.trip.pointsRequired,
-    awardCurrency: input.trip.awardCurrency,
+    withSuggestions,
+  )
+}
+
+function suggestionAfter(plan: SpendPlan, extras?: Partial<SuggestionAfter>): SuggestionAfter {
+  return {
+    status: plan.status,
+    netSavingEur: plan.netSavingEur,
+    targetDate: plan.targetReachedDate ?? undefined,
+    extraPointsPerMonth: extras?.extraPointsPerMonth,
+    extraPointsOneOff: extras?.extraPointsOneOff,
+    monthsSaved: extras?.monthsSaved,
   }
+}
+
+function improves(current: SpendPlan, after: SpendPlan): boolean {
+  return (
+    STATUS_RANK[after.status] > STATUS_RANK[current.status] || after.netSavingEur > current.netSavingEur + 0.005
+  )
+}
+
+function simulated(input: BuildPlanInput, patch: Partial<BuildPlanInput>): SpendPlan {
+  return computeSpendPlan({ ...input, ...patch, includeSuggestions: false })
 }
 
 function naiveMonthlyPoints(wallet: UserWallet, tripCurrency: SampleTrip['awardCurrency']): number {
   const first = wallet.cards[0]
   if (!first) return 0
-  const only = allocateTowardTrip([first], wallet.spend, tripCurrency)
-  return only.monthlyPointsInTrip
+  return allocateTowardTrip([first], wallet.spend, tripCurrency).monthlyPointsInTrip
 }
 
-function buildSuggestions(input: {
-  trip: SampleTrip
-  wallet: UserWallet
-  allocationMonthly: number
-  shortfall: number
-  netSavingEur: number
-  monthsAvailable: number
-  status: PlanStatus
-}): PlanSuggestion[] {
+function buildSuggestions(input: BuildPlanInput, current: SpendPlan): PlanSuggestion[] {
   const suggestions: PlanSuggestion[] = []
   const naive = naiveMonthlyPoints(input.wallet, input.trip.awardCurrency)
-  const extra = input.allocationMonthly - naive
+  const extra = current.assignments.length
+    ? allocateTowardTrip(input.wallet.cards, input.wallet.spend, input.trip.awardCurrency)
+        .monthlyPointsInTrip - naive
+    : 0
   if (extra > 0 && input.wallet.cards.length > 1) {
-    suggestions.push({
-      kind: 'reallocate',
-      reason: `Use the highest-value card per category for ${extra.toLocaleString('en-GB')} extra points a month.`,
-      netSavingEur: input.netSavingEur,
-      extraPoints: extra,
+    const firstOnly = simulated(input, {
+      wallet: { ...input.wallet, cards: [input.wallet.cards[0]!] },
     })
-  }
-
-  const owned = new Set(input.wallet.cards.map((c) => c.cardId))
-  const monthlyTotal = input.wallet.spend.monthlyTotalEur
-  for (const card of CARD_CATALOG) {
-    if (owned.has(card.id)) continue
-    const path = transferPathRatio(card.currency, input.trip.awardCurrency)
-    if (!path) continue
-    if (card.welcomeBonusMinSpend > monthlyTotal * WELCOME_BONUS_MONTHS) continue
-    const fee =
-      (card.annualFeeEur ?? 0) +
-      (card.monthlyFeeEur ?? 0) * Math.max(input.monthsAvailable, WELCOME_BONUS_MONTHS)
-    const bonusInTrip = Math.floor(card.welcomeBonusPoints * path.ratio)
-    const bonusValueEur = bonusInTrip * 0.012
-    if (bonusValueEur < fee) continue
-    const simulated = allocateTowardTrip(
-      [...input.wallet.cards, { cardId: card.id, revolutPlan: card.id === 'revolut' ? 'premium' : null }],
-      input.wallet.spend,
-      input.trip.awardCurrency,
-    )
-    suggestions.push({
-      kind: 'add_card',
-      reason: `Add ${card.name}: welcome bonus is reachable on your own spend within ${WELCOME_BONUS_MONTHS} months.`,
-      netSavingEur: input.netSavingEur - fee,
-      extraPoints: bonusInTrip + Math.max(0, simulated.monthlyPointsInTrip - input.allocationMonthly),
-      cardId: card.id,
-    })
-  }
-
-  if (
-    input.shortfall > 0 &&
-    input.shortfall / input.trip.pointsRequired <= TOP_UP_MAX_SHORTFALL_RATIO
-  ) {
-    const cost = input.shortfall * TOP_UP_EUR_PER_POINT
-    const saving = input.netSavingEur - cost
-    if (saving > 0) {
+    if (improves(firstOnly, current)) {
       suggestions.push({
-        kind: 'top_up',
-        reason: `Top up ${input.shortfall.toLocaleString('en-GB')} points (shortfall under 15%).`,
-        netSavingEur: saving,
+        kind: 'reallocate',
+        reason: `Use the highest-value card per category for ${extra.toLocaleString('en-GB')} extra points a month.`,
+        after: suggestionAfter(current, { extraPointsPerMonth: extra }),
+        delta: {
+          statusImproved: STATUS_RANK[current.status] > STATUS_RANK[firstOnly.status],
+          netSavingEur: current.netSavingEur - firstOnly.netSavingEur,
+        },
+        apply: { kind: 'reallocate' },
       })
     }
   }
 
-  const cheaper = TRIP_CATALOG.filter(
-    (t) => t.id !== input.trip.id && t.typicalCashEur < input.trip.typicalCashEur,
-  )[0]
-  if (cheaper && (input.status === 'short' || input.status === 'unreachable')) {
+  const owned = new Set(input.wallet.cards.map((c) => c.cardId))
+  const monthlySpend = categorySum(input.wallet.spend)
+  for (const card of CARD_CATALOG) {
+    if (owned.has(card.id)) continue
+    const path = transferPathRatio(card.currency, input.trip.awardCurrency)
+    if (!path) continue
+    if (card.welcomeBonusMinSpend > monthlySpend * WELCOME_BONUS_MONTHS) continue
+    const addedCard = {
+      cardId: card.id,
+      revolutPlan: card.id === 'revolut' ? ('premium' as const) : null,
+    }
+    const bonusBalances =
+      monthlySpend * WELCOME_BONUS_MONTHS >= card.welcomeBonusMinSpend
+        ? [
+            ...input.wallet.balances,
+            { currency: card.currency, balance: card.welcomeBonusPoints },
+          ]
+        : input.wallet.balances
+    const after = simulated(input, {
+      wallet: {
+        ...input.wallet,
+        cards: [...input.wallet.cards, addedCard],
+        balances: bonusBalances,
+      },
+    })
+    if (!improves(current, after)) continue
+    const bonusInTrip = Math.floor(card.welcomeBonusPoints * path.ratio)
     suggestions.push({
-      kind: 'cheaper_trip',
-      reason: `Consider ${cheaper.label} — a closer or cheaper sample trip.`,
-      netSavingEur: input.netSavingEur,
-      tripId: cheaper.id,
+      kind: 'add_card',
+      reason: `Add ${card.name}: welcome bonus is reachable on your own spend within ${WELCOME_BONUS_MONTHS} months.`,
+      after: suggestionAfter(after, { extraPointsOneOff: bonusInTrip }),
+      delta: {
+        statusImproved: STATUS_RANK[after.status] > STATUS_RANK[current.status],
+        netSavingEur: after.netSavingEur - current.netSavingEur,
+      },
+      apply: { kind: 'add_card', cardId: card.id },
     })
   }
 
-  if (input.netSavingEur <= 0) {
+  if (
+    current.shortfall > 0 &&
+    current.shortfall / input.trip.pointsRequired <= TOP_UP_MAX_SHORTFALL_RATIO
+  ) {
+    const cost = current.shortfall * TOP_UP_EUR_PER_POINT
+    const toppedBalances = [
+      ...input.wallet.balances,
+      { currency: input.trip.awardCurrency, balance: current.shortfall },
+    ]
+    const afterRaw = simulated(input, {
+      wallet: { ...input.wallet, balances: toppedBalances },
+    })
+    const after: SpendPlan = {
+      ...afterRaw,
+      netSavingEur: afterRaw.netSavingEur - cost,
+      verdict: verdictFor(afterRaw.netSavingEur - cost, afterRaw.cashBaseline.eur),
+    }
+    if (improves(current, after)) {
+      suggestions.push({
+        kind: 'top_up',
+        reason: `Top up ${current.shortfall.toLocaleString('en-GB')} points (shortfall under 15%).`,
+        after: suggestionAfter(after, { extraPointsOneOff: current.shortfall }),
+        delta: {
+          statusImproved: STATUS_RANK[after.status] > STATUS_RANK[current.status],
+          netSavingEur: after.netSavingEur - current.netSavingEur,
+        },
+        apply: { kind: 'top_up', points: current.shortfall },
+      })
+    }
+  }
+
+  const ranking = rankTripsForUser(
+    TRIP_CATALOG,
+    input.wallet,
+    input.travelDate,
+    input.today,
+    input.cashBaselines,
+    input.readyByDaysBefore,
+  )
+  const cheaper = ranking.best ?? ranking.reachable[0] ?? ranking.almost[0]
+  if (cheaper && cheaper.tripId !== input.trip.id) {
+    const trip = getTrip(cheaper.tripId)
+    if (trip) {
+      const after = simulated(input, { trip })
+      if (improves(current, after)) {
+        suggestions.push({
+          kind: 'cheaper_trip',
+          reason: `Consider ${trip.label} — a closer or cheaper sample trip.`,
+          after: suggestionAfter(after),
+          delta: {
+            statusImproved: STATUS_RANK[after.status] > STATUS_RANK[current.status],
+            netSavingEur: after.netSavingEur - current.netSavingEur,
+          },
+          apply: { kind: 'switch_trip', tripId: trip.id },
+        })
+      }
+    }
+  }
+
+  if (current.netSavingEur <= 0) {
     suggestions.push({
       kind: 'pay_cash',
       reason: 'Points are not worth more than paying cash on this trip.',
-      netSavingEur: input.netSavingEur,
+      after: suggestionAfter(current),
+      delta: { statusImproved: false, netSavingEur: 0 },
+      apply: { kind: 'pay_cash' },
     })
   }
 
-  return suggestions.sort((a, b) => b.netSavingEur - a.netSavingEur)
+  return suggestions.sort((a, b) => {
+    if (a.delta.statusImproved !== b.delta.statusImproved) {
+      return a.delta.statusImproved ? -1 : 1
+    }
+    return b.after.netSavingEur - a.after.netSavingEur
+  })
 }
 
 export function rankTripsForUser(
@@ -378,6 +513,7 @@ export function rankTripsForUser(
       today,
       readyByDaysBefore,
       cashBaselines,
+      includeSuggestions: false,
     })
     return {
       tripId: trip.id,
@@ -400,13 +536,13 @@ export function rankTripsForUser(
         r.shortfall / r.pointsRequired <= ALMOST_SHORTFALL_RATIO,
     )
     .sort((a, b) => a.shortfall - b.shortfall)
-  const outOfReach = ranked.filter(
-    (r) => !reachable.includes(r) && !almost.includes(r),
-  )
+  const outOfReach = ranked.filter((r) => !reachable.includes(r) && !almost.includes(r))
+  const best = reachable.find((r) => r.netSavingEur > 0) ?? null
   return {
-    best: reachable[0] ?? null,
+    best,
     reachable,
     almost,
     outOfReach,
   }
 }
+

@@ -37,7 +37,11 @@ export async function destroySession(): Promise<void> {
   const jar = await cookies()
   const token = jar.get(SESSION_COOKIE)?.value
   if (token) {
-    await db.delete(sessions).where(eq(sessions.tokenHash, sha256(token)))
+    try {
+      await db.delete(sessions).where(eq(sessions.tokenHash, sha256(token)))
+    } catch (error) {
+      console.error('Failed to clear session in the database', error instanceof Error ? error.message : 'unknown')
+    }
   }
   jar.set(SESSION_COOKIE, '', sessionCookieOptions(new Date(0)))
 }
@@ -61,7 +65,11 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
       .where(and(eq(sessions.tokenHash, tokenHash), gt(sessions.expiresAt, now)))
       .limit(1)
     return rows[0] ?? null
-  } catch {
+  } catch (error) {
+    console.error(
+      'Failed to load the current session',
+      error instanceof Error ? error.message : 'unknown',
+    )
     return null
   }
 })

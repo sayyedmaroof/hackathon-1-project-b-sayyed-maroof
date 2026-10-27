@@ -1,193 +1,133 @@
-/** Shared domain types. UI components depend on these, never on mock modules. */
+export const VIEWS = [
+  'home',
+  'dashboard',
+  'search',
+  'results',
+  'planner',
+  'trips',
+  'alerts',
+  'loyalty',
+  'savings',
+] as const
 
-export type Hack =
-  | "flexible-dates"
-  | "nearby-airports"
-  | "split-ticket"
-  | "stopover"
-  | "miles"
-  | "transfer-partner";
+export type View = (typeof VIEWS)[number]
 
-export type Risk = "low" | "medium" | "high";
-
-export type Cabin = "economy" | "premium" | "business";
-
-export type TripMode = "quick" | "full";
-
-export type CurrencyCode = "EUR" | "GBP" | "USD";
-
-export interface Airport {
-  code: string;
-  city: string;
-  name: string;
-  country: string;
-  /** City cluster used for nearby-airport hints, e.g. "Madrid". */
-  cluster: string;
-  /** Horizontal position on the schematic Europe map, 0–100. */
-  x: number;
-  /** Vertical position on the schematic Europe map, 0–100. */
-  y: number;
+export function isView(value: string): value is View {
+  return (VIEWS as readonly string[]).includes(value)
 }
 
-export interface Leg {
-  id: string;
-  from: string;
-  to: string;
-  depart: string;
-  returnDate?: string;
+export type Cabin = 'Economy' | 'Premium Economy' | 'Business' | 'First'
+
+export type FlightOption = {
+  id: string
+  airline: string
+  code: string
+  from: string
+  to: string
+  departTime: string
+  arriveTime: string
+  duration: string
+  stops: string
+  cash: number
+  points: number
+  fees: number
+  tone: string
+  cabin: Cabin
 }
 
-export interface ProgramBalance {
-  programId: string;
-  balance: number;
+export type Trip = {
+  id: string
+  title: string
+  detail: string
+  cash: number
+  fees: number
+  points: number
+  program: string
+  cabin?: Cabin
+  airline?: string
+  bookUrl?: string
+  checklist?: string[]
 }
 
-export interface TripQuery {
-  mode: TripMode;
-  legs: Leg[];
-  travellers: number;
-  cabin: Cabin;
-  flexDays: number;
-  programs?: ProgramBalance[];
+export type LoyaltyProgram = {
+  id: string
+  name: string
+  balance: number
+  unit: string
+  note: string
 }
 
-export interface Segment {
-  from: string;
-  to: string;
-  departAt: string;
-  arriveAt: string;
-  carrier: string;
-  flightNumber: string;
-  durationMinutes: number;
-  layoverMinutes?: number;
+export type Alert = {
+  id: string
+  route: string
+  detail: string
+  active: boolean
+  cabin?: Cabin
+  targetPrice?: number
+  targetPoints?: number
 }
 
-export type CostKind = "fare" | "bags" | "ground" | "taxes" | "points" | "surcharges" | "fees";
+export type SearchMode = 'Compare both' | 'Cash fares' | 'Points options'
 
-export interface CostLine {
-  label: string;
-  amount: number;
-  kind: CostKind;
+export type SearchQuery = {
+  origin: string
+  destination: string
+  when: string
+  depart: string
+  returnDate: string
+  travelers: string
+  cabin: Cabin
+  mode: SearchMode
+  flexible: boolean
 }
 
-export interface CardSuggestion {
-  name: string;
-  pointsEarned: number;
-  euroValue: number;
-  reason: string;
+export type SearchErrors = Partial<Record<'origin' | 'destination' | 'depart' | 'returnDate', string>>
+
+export type StopsFilter = 'any' | 'nonstop' | '1'
+export type DepartureWindow = 'any' | 'morning' | 'afternoon' | 'evening'
+
+export type FlightFilters = {
+  maxCash: number
+  maxPoints: number
+  /** Included airlines. Used only when `airlineSelection` is true; an empty list matches nothing. */
+  airlines: string[]
+  airlineSelection: boolean
+  stops: StopsFilter
+  departureWindow: DepartureWindow
 }
 
-export interface HeatCell {
-  date: string;
-  price: number;
+export type FlexibleDay = {
+  date: string
+  label: string
+  delta: number
 }
 
-export interface Option {
-  id: string;
-  hacks: Hack[];
-  normalPrice: number;
-  hackedPrice: number;
-  saving: number;
-  savingPct: number;
-  extraMinutes: number;
-  risk: Risk;
-  whyItWorks: string;
-  legs: Segment[];
-  costBreakdown: CostLine[];
-  /** Fixed ISO timestamp from the data source. Do not generate at render time. */
-  pricedAt: string;
-  origin: string;
-  destination: string;
-  durationMinutes: number;
-  stops: number;
-  bestCard: CardSuggestion;
-  waitSignal: "book" | "wait";
-  heatmap?: HeatCell[];
+export type Airport = {
+  code: string
+  city: string
+  name: string
+  country: string
 }
 
-export interface HackMeta {
-  slug: Hack;
-  name: string;
-  summary: string;
-  why: string;
-  difficulty: string;
-  typicalSaving: string;
-  risk: Risk;
-  how: string[];
-  when: string;
-  risks: string[];
+export type Destination = {
+  city: string
+  country: string
+  code: string
+  meta: string
+  image: string
 }
 
-export interface SavedTrip {
-  id: string;
-  savedAt: string;
-  alert: boolean;
-  snapshot: Option;
+export type RevolutPlan = 'Premium' | 'Metal' | 'Ultra'
+
+export type ChatMessage = {
+  id: string
+  role: 'user' | 'assistant'
+  text: string
+  trip?: Trip
 }
 
-export interface LoyaltyProgram {
-  id: string;
-  name: string;
-  kind: "bank" | "airline" | "hotel";
-  balance: number;
-  expiry: string;
-  euroValue: number;
-  /** Points required for the sample next trip. */
-  nextTripCost: number;
-  unit: string;
-}
-
-export interface TransferLink {
-  fromId: string;
-  toId: string;
-  ratio: string;
-}
-
-export interface FaqItem {
-  question: string;
-  answer: string;
-}
-
-export interface Testimonial {
-  id: string;
-  name: string;
-  route: string;
-  quote: string;
-  saving: number;
-  /** Sample copy. Not a real customer. */
-  sample: true;
-}
-
-export interface Stat {
-  id: string;
-  value: number;
-  prefix?: string;
-  suffix?: string;
-  label: string;
-  /** Sample figure, not a live metric. */
-  sample: true;
-}
-
-export interface TickerItem {
-  id: string;
-  route: string;
-  saving: number;
-  /** Sample ticker line. */
-  sample: true;
-}
-
-export interface HowStep {
-  id: string;
-  title: string;
-  body: string;
-}
-
-export interface Preferences {
-  currency: CurrencyCode;
-  homeAirport: string;
-  timeValue: number;
-  name: string;
-  email: string;
-  alerts: boolean;
-  productUpdates: boolean;
+export type Conversation = {
+  id: string
+  title: string
+  messages: ChatMessage[]
 }

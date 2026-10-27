@@ -8,7 +8,8 @@ import { SavingsBadge } from '@/components/savings-badge'
 import { awardChipLabel } from '@/lib/cards/chip-label'
 import type { PointsPlan } from '@/lib/cards/types'
 import type { FlightOffer } from '@/lib/providers/types'
-import { calculateSavings, formatCents, formatEuro, formatPct, formatPoints } from '@/lib/savings'
+import { DataModeLabel, sandboxCopy } from '@/components/data-mode-label'
+import { calculateSavings, formatCents, formatMoney, formatPct, formatPoints } from '@/lib/savings'
 import { cn } from '@/lib/utils'
 
 export function OfferCard({
@@ -19,6 +20,7 @@ export function OfferCard({
   isSampleProfile,
   pointsPlan,
   planCurrencyId,
+  displayCurrency,
 }: {
   offer: FlightOffer
   normalPrice: number
@@ -27,6 +29,7 @@ export function OfferCard({
   isSampleProfile: boolean
   pointsPlan: PointsPlan | null
   planCurrencyId?: string
+  displayCurrency: string
 }) {
   const chip = offer.kind === 'award' && offer.points > 0 ? awardChipLabel(pointsPlan, planCurrencyId) : null
   const [open, setOpen] = useState(false)
@@ -50,8 +53,9 @@ export function OfferCard({
         </div>
         <div className="flex flex-col items-end gap-1">
           {offer.isSampleAward ? <span className="mock-label">Sample award data</span> : null}
+          <DataModeLabel mode={offer.dataMode} />
           {chip ? <span className="status text-[11px]">{chip}</span> : null}
-          <SavingsBadge cash={offer.cashPrice} fees={offer.fees} points={offer.points} />
+          {sandboxCopy(offer.dataMode) ? null : <SavingsBadge cash={offer.cashPrice} fees={offer.fees} points={offer.points} />}
         </div>
       </div>
       <div className="mt-6 flex items-center gap-5">
@@ -71,14 +75,14 @@ export function OfferCard({
       <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <p className="text-xs text-[#8a796b]">Cash price</p>
-          <p className="text-lg font-semibold">{formatEuro(offer.cashPrice)}</p>
+          <p className="text-lg font-semibold">{formatMoney(offer.cashPrice, offer.currency ?? displayCurrency)}</p>
         </div>
         <div>
           <p className="text-xs text-[#8a796b]">Award</p>
           <p className="text-lg font-semibold">
             {offer.points ? (
               <>
-                {formatPoints(offer.points)} <span className="text-xs font-normal">+ {formatEuro(offer.fees)}</span>
+                {formatPoints(offer.points)} <span className="text-xs font-normal">+ {formatMoney(offer.fees, offer.currency ?? displayCurrency)}</span>
               </>
             ) : (
               '—'
@@ -90,9 +94,9 @@ export function OfferCard({
           <p className="text-lg font-semibold">{formatCents(savings.valuePerPoint)}</p>
         </div>
         <div>
-          <p className="text-xs text-[#8a796b]">Net saving</p>
+          <p className="text-xs text-[#8a796b]">{sandboxCopy(offer.dataMode) ? 'Sandbox difference' : 'Net saving'}</p>
           <p className="text-lg font-semibold text-[#b86632]">
-            {formatEuro(savings.netSaving)} <span className="text-sm">{formatPct(savings.savingPct)}</span>
+            {formatMoney(savings.netSaving, offer.currency ?? displayCurrency)} <span className="text-sm">{formatPct(savings.savingPct)}</span>
           </p>
         </div>
       </div>
@@ -114,6 +118,7 @@ export function OfferCard({
           isSampleProfile={isSampleProfile}
           pointsPlan={pointsPlan}
           planCurrencyId={planCurrencyId}
+          displayCurrency={displayCurrency}
           onClose={() => setOpen(false)}
         />
       ) : null}

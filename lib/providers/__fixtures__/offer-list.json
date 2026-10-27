@@ -1,0 +1,53 @@
+{
+  "data": [
+    {
+      "id": "off_test_cheapest",
+      "expires_at": "2099-01-01T10:00:00Z",
+      "total_amount": "120.50",
+      "total_currency": "EUR",
+      "base_amount": "90.00",
+      "tax_amount": "30.50",
+      "owner": { "iata_code": "BA", "name": "British Airways" },
+      "passengers": [{ "id": "pas_test_1" }],
+      "conditions": {
+        "change_before_departure": { "allowed": true },
+        "refund_before_departure": { "allowed": false }
+      },
+      "slices": [
+        {
+          "origin": { "iata_code": "LHR" },
+          "destination": { "iata_code": "JFK" },
+          "duration": "PT7H30M",
+          "segments": [
+            {
+              "departing_at": "2027-06-01T09:00:00",
+              "arriving_at": "2027-06-01T12:30:00",
+              "duration": "PT7H30M",
+              "origin": { "iata_code": "LHR" },
+              "destination": { "iata_code": "JFK" },
+              "marketing_carrier": { "iata_code": "BA", "name": "British Airways" },
+              "operating_carrier": { "iata_code": "BA", "name": "British Airways" },
+              "marketing_carrier_flight_number": "117",
+              "aircraft": { "name": "Boeing 777" },
+              "passengers": [{ "baggages": [{ "type": "checked", "quantity": 1 }] }]
+            }
+          ]
+        },
+        {
+          "origin": { "iata_code": "JFK" },
+          "destination": { "iata_code": "LHR" },
+          "duration": "PT7H10M",
+          "segments": [
+            {
+              "departing_at": "2027-06-10T18:00:00",
+              "arriving_at": "2027-06-11T06:10:00",
+              "marketing_carrier": { "iata_code": "BA" },
+              "marketing_carrier_flight_number": "112"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "meta": { "limit": 50, "after": null }
+}

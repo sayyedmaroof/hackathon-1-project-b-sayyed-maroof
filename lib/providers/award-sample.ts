@@ -28,6 +28,7 @@ function toOffer(row: (typeof sampleFlights)[0], query: ProviderSearchQuery): Fl
     tone: row.tone || TONE[row.code] || 'bg-[#2a211b]',
     whyThisWorks: 'Award seats plus taxes can beat the cash fare when points are valued fairly.',
     isSampleAward: true,
+    currency: 'EUR',
     departDate: query.departDate,
     returnDate: query.returnDate,
   }

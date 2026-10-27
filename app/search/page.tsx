@@ -1,7 +1,6 @@
-import { SearchRouteClient } from '@/components/search-route-client'
-import { getCurrentUser } from '@/lib/auth/current-user'
+import { redirect } from 'next/navigation'
 
-export default async function SearchRoute() {
-  const user = await getCurrentUser()
-  return <SearchRouteClient user={user} />
+/** Spend planning is the product. Flight search is no longer the entry point. */
+export default function SearchRoute() {
+  redirect('/')
 }

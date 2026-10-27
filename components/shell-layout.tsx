@@ -10,7 +10,7 @@ import type { SessionUser } from '@/lib/auth/types'
 
 export function ShellLayout({ user, children }: { user: SessionUser | null; children: ReactNode }) {
   const [open, setOpen] = useState(false)
-  const greeting = user ? `Hello, ${user.name.split(' ')[0]}` : 'Find cheaper flights'
+  const greeting = user ? `Hello, ${user.name.split(' ')[0]}` : 'Guide this month’s spend'
 
   return (
     <div className="min-h-screen bg-[#f7f2e9] text-[#2a211b]">

@@ -11,7 +11,9 @@ import { placeName } from '@/lib/data'
 import { awardCurrencyForAirlineCode } from '@/lib/cards/award-currency'
 import type { OfferWithPlan } from '@/lib/cards/enrich-offers'
 import type { FlightOffer } from '@/lib/providers/types'
-import { formatEuro, formatPct } from '@/lib/savings'
+import { DataModeLabel, sandboxCopy } from '@/components/data-mode-label'
+import type { DataMode } from '@/lib/providers/types'
+import { formatMoney, formatPct } from '@/lib/savings'
 import { activeFilterCount, applyFilters, defaultFilters } from '@/lib/search'
 import type { FlightFilters } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -33,6 +35,9 @@ export function LiveResultsView({
   userVerified,
   isSampleProfile,
   error,
+  warning,
+  dataMode,
+  displayCurrency,
 }: {
   originLabel: string
   destinationLabel: string
@@ -48,6 +53,9 @@ export function LiveResultsView({
   userVerified: boolean
   isSampleProfile: boolean
   error?: string
+  warning?: string
+  dataMode: DataMode
+  displayCurrency: string
 }) {
   const planById = useMemo(() => new Map(offerPlans.map((p) => [p.offer.id, p])), [offerPlans])
   const [sort, setSort] = useState<SortMode>('cheapest')
@@ -101,26 +109,41 @@ export function LiveResultsView({
   return (
     <>
       <div className="panel mb-8 p-6">
-        <p className="eyebrow">Your savings</p>
+        <p className="eyebrow">{sandboxCopy(dataMode) ? 'Sandbox comparison' : 'Your savings'}</p>
         <p className="mt-3 text-lg text-[#66584e]">
-          Normal price <strong className="text-[#2a211b]">{formatEuro(normalPrice)}</strong>
+          Normal price <strong className="text-[#2a211b]">{formatMoney(normalPrice, displayCurrency)}</strong>
           {' → '}
-          Best price <strong className="text-[#b86632]">{formatEuro(bestPrice)}</strong>
-          {' → '}
-          You save{' '}
-          <strong className="text-[#b86632]">
-            {formatEuro(savingsAmount)} ({formatPct(savingsPct)})
-          </strong>
+          Best price <strong className="text-[#b86632]">{formatMoney(bestPrice, displayCurrency)}</strong>
+          {sandboxCopy(dataMode) ? (
+            <>
+              {' → '}
+              Difference{' '}
+              <strong className="text-[#b86632]">
+                {formatMoney(savingsAmount, displayCurrency)} ({formatPct(savingsPct)})
+              </strong>
+            </>
+          ) : (
+            <>
+              {' → '}
+              You save{' '}
+              <strong className="text-[#b86632]">
+                {formatMoney(savingsAmount, displayCurrency)} ({formatPct(savingsPct)})
+              </strong>
+            </>
+          )}
         </p>
+        <div className="mt-2">
+          <DataModeLabel mode={dataMode} />
+        </div>
       </div>
 
       <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
         <div className="min-w-0">
           <Link
-            href="/search"
+            href="/"
             className="mb-4 flex min-h-11 items-center gap-2 text-sm font-semibold text-[#b86632]"
           >
-            <ArrowRight className="size-4 rotate-180" /> Edit search
+            <ArrowRight className="size-4 rotate-180" /> Back to spend plan
           </Link>
           <h1 className="text-4xl font-semibold tracking-[-.06em]">
             {originLabel} <span className="text-[#b86632]">→</span> {destinationLabel}
@@ -133,6 +156,9 @@ export function LiveResultsView({
 
       {error ? (
         <p className="mt-4 rounded-xl border border-[#e8c4b8] bg-[#fff5f2] px-4 py-3 text-sm text-[#8b3a2a]">{error}</p>
+      ) : null}
+      {warning ? (
+        <p className="mt-4 rounded-xl border border-[#e8d8b8] bg-[#fff8f0] px-4 py-3 text-sm text-[#8a5a2a]">{warning}</p>
       ) : null}
 
       <div className="mt-8 flex gap-2 overflow-x-auto border-b border-[#dfd2c4] pb-px">
@@ -199,6 +225,7 @@ export function LiveResultsView({
                   isSampleProfile={isSampleProfile}
                   pointsPlan={enriched?.pointsPlan ?? null}
                   planCurrencyId={awardCurrencyForAirlineCode(offer.airlineCode) ?? undefined}
+                  displayCurrency={displayCurrency}
                 />
               )
             })

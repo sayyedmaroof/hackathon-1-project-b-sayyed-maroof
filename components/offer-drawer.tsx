@@ -9,7 +9,8 @@ import { PointsPathPanel } from '@/components/points-path-panel'
 import type { PointsPlan } from '@/lib/cards/types'
 import { AWARD_STEPS } from '@/lib/loyalty'
 import type { FlightOffer } from '@/lib/providers/types'
-import { calculateSavings, formatCents, formatEuro, formatPct, formatPoints } from '@/lib/savings'
+import { DataModeLabel, sandboxCopy } from '@/components/data-mode-label'
+import { calculateSavings, formatCents, formatMoney, formatPct, formatPoints } from '@/lib/savings'
 
 const TRANSFER_NOTE =
   'Typical path: Revolut → British Airways → Iberia. Accounts must be 30+ days old and passenger details must match.'
@@ -22,6 +23,7 @@ export function OfferDrawer({
   isSampleProfile,
   pointsPlan,
   planCurrencyId,
+  displayCurrency,
   onClose,
 }: {
   offer: FlightOffer
@@ -31,6 +33,7 @@ export function OfferDrawer({
   isSampleProfile: boolean
   pointsPlan: PointsPlan | null
   planCurrencyId?: string
+  displayCurrency: string
   onClose: () => void
 }) {
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -38,17 +41,22 @@ export function OfferDrawer({
   const loginHref = `/login?next=${encodeURIComponent(resultsPath)}`
   const isCash = offer.source === 'duffel' && offer.duffelOfferId
 
-  const [passenger, setPassenger] = useState({
+  const emptyPassenger = {
     givenName: '',
     familyName: '',
     email: '',
     phone: '+34',
     bornOn: '1990-01-01',
     gender: 'm' as 'm' | 'f',
-  })
+  }
+  const passengerCount = Math.max(1, offer.passengerIds?.length ?? 1)
+  const [passengers, setPassengers] = useState(() => Array.from({ length: passengerCount }, () => ({ ...emptyPassenger })))
+  const [acceptAmount, setAcceptAmount] = useState<string | null>(null)
+  const [acceptCurrency, setAcceptCurrency] = useState<string | null>(null)
   const [checklist, setChecklist] = useState<Record<string, boolean>>({})
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const money = (value: number) => formatMoney(value, offer.currency ?? displayCurrency)
 
   useEffect(() => {
     closeRef.current?.focus()
@@ -72,11 +80,19 @@ export function OfferDrawer({
     formData.set('returnDate', offer.returnDate ?? '')
     formData.set('cabin', offer.cabin)
     formData.set('cashPrice', String(offer.cashPrice))
-    formData.set('passengers', JSON.stringify([passenger]))
+    formData.set('passengers', JSON.stringify(passengers))
     formData.set('next', resultsPath)
+    if (acceptAmount && acceptCurrency) {
+      formData.set('acceptAmount', acceptAmount)
+      formData.set('acceptCurrency', acceptCurrency)
+    }
     const result = await bookCashOffer(null, formData)
     if (result && 'error' in result && result.error) {
       setError(result.error)
+      if ('priceChanged' in result && result.priceChanged) {
+        setAcceptAmount(result.priceChanged.amount)
+        setAcceptCurrency(result.priceChanged.currency)
+      }
       setPending(false)
     }
   }
@@ -95,7 +111,7 @@ export function OfferDrawer({
     formData.set('cashPrice', String(offer.cashPrice))
     formData.set('awardPoints', String(offer.points))
     formData.set('awardFees', String(offer.fees))
-    formData.set('passengers', JSON.stringify([passenger]))
+    formData.set('passengers', JSON.stringify(passengers))
     formData.set('next', resultsPath)
     const result = await markAwardBooked(null, formData)
     if (result && 'error' in result && result.error) {
@@ -137,13 +153,21 @@ export function OfferDrawer({
         <section className="mt-6 border-t border-[#e8ddd1] pt-5">
           <h3 className="font-semibold">Price breakdown</h3>
           <dl className="mt-3 flex flex-col gap-2 text-sm">
-            <Row label="Cash fare" value={formatEuro(offer.cashPrice)} />
-            <Row label="Taxes and fees" value={formatEuro(offer.fees)} />
+            <Row label="Cash fare" value={money(offer.cashPrice)} />
+            <Row label="Taxes and fees" value={money(offer.fees)} />
             <Row label="Points" value={offer.points ? `${formatPoints(offer.points)} Avios` : '—'} />
-            <Row label="Net saving" value={`${formatEuro(savings.netSaving)} · ${formatPct(savings.savingPct)}`} accent />
+            <Row
+              label={sandboxCopy(offer.dataMode) ? 'Sandbox difference' : 'Net saving'}
+              value={`${money(savings.netSaving)} · ${formatPct(savings.savingPct)}`}
+              accent
+            />
             <Row label="Cents per point" value={formatCents(savings.centsPerPoint)} />
           </dl>
         </section>
+
+        <div className="mt-4">
+          <DataModeLabel mode={offer.dataMode} />
+        </div>
 
         <section className="mt-6 border-t border-[#e8ddd1] pt-5">
           <h3 className="font-semibold">Why this works</h3>
@@ -168,11 +192,17 @@ export function OfferDrawer({
           </div>
         ) : isCash ? (
           <section className="mt-6 border-t border-[#e8ddd1] pt-5">
-            <h3 className="font-semibold">Passenger</h3>
-            <PassengerFields value={passenger} onChange={setPassenger} />
+            <h3 className="font-semibold">{passengers.length > 1 ? 'Passengers' : 'Passenger'}</h3>
+            {passengers.map((passenger, index) => (
+              <PassengerFields
+                key={offer.passengerIds?.[index] ?? index}
+                value={passenger}
+                onChange={(next) => setPassengers((rows) => rows.map((row, i) => (i === index ? next : row)))}
+              />
+            ))}
             {error ? <p className="mt-2 text-sm text-[#8b3a2a]">{error}</p> : null}
             <Button variant="terra" className="mt-4 min-h-11 w-full" disabled={pending} onClick={() => void submitCash()}>
-              {pending ? 'Booking…' : 'Book test cash fare'}
+              {pending ? 'Booking…' : acceptAmount ? 'Confirm new price' : offer.dataMode === 'live' ? 'Book cash fare' : 'Book test cash fare'}
             </Button>
           </section>
         ) : (
@@ -204,7 +234,7 @@ export function OfferDrawer({
             </a>
             <div className="mt-6">
               <h4 className="font-semibold">Traveler on record</h4>
-              <PassengerFields value={passenger} onChange={setPassenger} />
+              <PassengerFields value={passengers[0]!} onChange={(next) => setPassengers((rows) => [next, ...rows.slice(1)])} />
             </div>
             {error ? <p className="mt-2 text-sm text-[#8b3a2a]">{error}</p> : null}
             <Button variant="terra" className="mt-4 min-h-11 w-full" disabled={pending} onClick={() => void submitAward()}>

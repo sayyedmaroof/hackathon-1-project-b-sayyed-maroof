@@ -60,6 +60,9 @@ async function ResultsContent({ searchParams }: { searchParams: Record<string, s
       userVerified={userVerified}
       isSampleProfile={!userVerified}
       error={result.error}
+      warning={result.warning}
+      dataMode={result.dataMode}
+      displayCurrency={result.displayCurrency}
     />
   )
 }

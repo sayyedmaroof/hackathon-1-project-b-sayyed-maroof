@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
 
@@ -50,26 +51,34 @@ export const searches = pgTable('searches', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const bookings = pgTable('bookings', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  provider: bookingProviderEnum('provider').notNull(),
-  providerRef: text('provider_ref').notNull(),
-  origin: text('origin').notNull(),
-  destination: text('destination').notNull(),
-  departDate: text('depart_date').notNull(),
-  returnDate: text('return_date').notNull(),
-  cabin: text('cabin').notNull(),
-  cashPrice: numeric('cash_price', { precision: 12, scale: 2 }).notNull(),
-  awardPoints: numeric('award_points', { precision: 12, scale: 0 }),
-  awardFees: numeric('award_fees', { precision: 12, scale: 2 }),
-  savingEur: numeric('saving_eur', { precision: 12, scale: 2 }).notNull(),
-  status: text('status').notNull(),
-  passengers: jsonb('passengers').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const bookings = pgTable(
+  'bookings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    provider: bookingProviderEnum('provider').notNull(),
+    providerRef: text('provider_ref').notNull(),
+    origin: text('origin').notNull(),
+    destination: text('destination').notNull(),
+    departDate: text('depart_date').notNull(),
+    returnDate: text('return_date').notNull(),
+    cabin: text('cabin').notNull(),
+    cashPrice: numeric('cash_price', { precision: 12, scale: 2 }).notNull(),
+    awardPoints: numeric('award_points', { precision: 12, scale: 0 }),
+    awardFees: numeric('award_fees', { precision: 12, scale: 2 }),
+    savingEur: numeric('saving_eur', { precision: 12, scale: 2 }).notNull(),
+    status: text('status').notNull(),
+    passengers: jsonb('passengers').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    offerId: text('offer_id'),
+    providerOrderId: text('provider_order_id'),
+    currency: text('currency'),
+    dataMode: text('data_mode'),
+  },
+  (t) => [uniqueIndex('bookings_user_provider_offer_uidx').on(t.userId, t.provider, t.offerId)],
+)
 
 export {
   userCards,

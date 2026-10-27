@@ -8,10 +8,12 @@ import { Logo } from '@/components/logo'
 import { Photo } from '@/components/photo'
 import { SearchForm } from '@/components/search-form'
 import { destinations, sampleFlights } from '@/lib/data'
-import { navigate } from '@/lib/hash-view'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { calculateSavings, formatEuro, formatPct, formatPointsCompact } from '@/lib/savings'
 import { useApp } from '@/lib/store'
 import { cn } from '@/lib/utils'
+import type { SessionUser } from '@/lib/auth/types'
 
 const steps = [
   ['01', 'Tell us where you want to go.', 'Your destination, dates, and how you like to travel.'],
@@ -20,7 +22,8 @@ const steps = [
   ['04', 'Choose how to book.', 'You stay in control, with every trade-off made clear.'],
 ]
 
-export function HomeView() {
+export function HomeView({ user }: { user: SessionUser | null }) {
+  const router = useRouter()
   const { patchSearch } = useApp()
   const example = sampleFlights[0]
   const savings = calculateSavings(example)
@@ -28,7 +31,7 @@ export function HomeView() {
 
   return (
     <div className="min-h-screen bg-[#f7f2e9] text-[#2a211b]">
-      <Header />
+      <Header user={user} />
       <main>
         <section className="relative overflow-hidden px-5 pb-10 pt-32 lg:px-8 lg:pt-40">
           <div className="mx-auto grid max-w-[1240px] items-center gap-12 lg:grid-cols-[.9fr_1.1fr] lg:gap-20">
@@ -43,12 +46,24 @@ export function HomeView() {
                 Turn balances, transfer partners, and award availability into one clear answer: the smartest way to book your trip.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Button variant="terra" onClick={() => navigate('search')}>
+                <Button variant="terra" onClick={() => router.push('/search')}>
                   Check a trip <ArrowRight className="size-4" />
                 </Button>
-                <Button variant="outline" onClick={() => navigate('loyalty')}>
-                  Add your balances
-                </Button>
+                {user ? (
+                  <Link
+                    href="/bookings"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#d7c9b9] px-5 text-sm font-semibold"
+                  >
+                    My bookings
+                  </Link>
+                ) : (
+                  <Link
+                    href="/signup"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#d7c9b9] px-5 text-sm font-semibold"
+                  >
+                    Create account
+                  </Link>
+                )}
               </div>
               <div className="mt-8 flex items-center gap-3 text-xs text-[#8a796b]">
                 <div className="flex -space-x-2">
@@ -136,7 +151,7 @@ export function HomeView() {
                 <p className="eyebrow">Go further</p>
                 <h2 className="section-title">Where could you go?</h2>
               </div>
-              <button onClick={() => navigate('search')} className="hidden items-center gap-2 text-sm font-semibold text-[#b86632] sm:flex">
+              <button onClick={() => router.push('/search')} className="hidden items-center gap-2 text-sm font-semibold text-[#b86632] sm:flex">
                 Explore destinations <ArrowRight className="size-4" />
               </button>
             </div>
@@ -146,7 +161,7 @@ export function HomeView() {
                   key={destination.city}
                   onClick={() => {
                     patchSearch({ destination: `${destination.city} (${destination.code})` })
-                    navigate('search')
+                    router.push('/search')
                   }}
                   className={cn('destination-card group bg-[#c4a484]', index === 1 && 'md:translate-y-8')}
                 >
@@ -176,7 +191,7 @@ export function HomeView() {
               <p className="mt-6 max-w-md leading-7 text-[#c4b5a7]">
                 Tell our planner where you want to go, what you have to spend, and what matters most. It will find the possibilities worth exploring.
               </p>
-              <Button variant="terra" className="mt-8" onClick={() => navigate('planner')}>
+              <Button variant="terra" className="mt-8" onClick={() => router.push('/search')}>
                 Try the travel planner <ArrowRight className="size-4" />
               </Button>
             </div>

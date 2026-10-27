@@ -1,11 +1,11 @@
+import Link from 'next/link'
 import { Plane } from 'lucide-react'
-import { navigate } from '@/lib/hash-view'
 import { cn } from '@/lib/utils'
 
 export function Logo({ light = false }: { light?: boolean }) {
   return (
-    <button
-      onClick={() => navigate('home')}
+    <Link
+      href="/"
       className={cn(
         'flex items-center gap-2 font-semibold tracking-[-0.04em]',
         light ? 'text-[#fffaf2]' : 'text-[#2a211b]',
@@ -20,6 +20,6 @@ export function Logo({ light = false }: { light?: boolean }) {
         <Plane className="size-4 -rotate-12 text-[#fffaf2]" />
       </span>
       <span className="whitespace-nowrap text-[19px]">FareFlip</span>
-    </button>
+    </Link>
   )
 }

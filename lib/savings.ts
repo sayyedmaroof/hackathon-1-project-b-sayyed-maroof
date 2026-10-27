@@ -1,4 +1,4 @@
-export type Verdict = 'great' | 'good' | 'poor'
+export type SavingsVerdict = 'use_points' | 'pay_cash'
 
 export type SavingsInput = {
   cash: number
@@ -8,12 +8,14 @@ export type SavingsInput = {
 }
 
 export type SavingsResult = {
-  cashAvoided: number
-  pointsValue: number
   netSaving: number
   savingPct: number
+  centsPerPoint: number
+  verdict: SavingsVerdict
+  /** @deprecated internal display helpers */
+  cashAvoided: number
+  pointsValue: number
   valuePerPoint: number
-  verdict: Verdict
 }
 
 export const DEFAULT_CENTS_PER_POINT = 1.2
@@ -38,13 +40,13 @@ export function calculateSavings({
   const netSaving = safeCash - safeFees - pointsValue
   const savingPct = safeCash === 0 ? 0 : netSaving / safeCash
   const valuePerPoint = safePoints === 0 ? 0 : (cashAvoided / safePoints) * 100
-  const verdict: Verdict = valuePerPoint >= 2 ? 'great' : valuePerPoint >= 1.2 ? 'good' : 'poor'
+  const verdict: SavingsVerdict = valuePerPoint >= 1.2 && netSaving > 0 ? 'use_points' : 'pay_cash'
 
-  return { cashAvoided, pointsValue, netSaving, savingPct, valuePerPoint, verdict }
+  return { netSaving, savingPct, centsPerPoint: cents, verdict, cashAvoided, pointsValue, valuePerPoint }
 }
 
-export function savingsLabel(verdict: Verdict): 'Use points' | 'Pay cash' {
-  return verdict === 'poor' ? 'Pay cash' : 'Use points'
+export function savingsLabel(verdict: SavingsVerdict): 'Use points' | 'Pay cash' {
+  return verdict === 'use_points' ? 'Use points' : 'Pay cash'
 }
 
 export type ExplanationInput = SavingsInput & {
@@ -74,13 +76,10 @@ export function whyThisWorks({
   const cents = formatCents(savings.valuePerPoint)
   const chart = `${article(program)} ${program} chart`
 
-  if (savings.verdict === 'great') {
-    return `${label} on ${chart} is cheaper than cash at this price (${cents} per point).`
+  if (savings.verdict === 'use_points') {
+    return `${label} on ${chart} beats paying cash after fees (${cents} per point).`
   }
-  if (savings.verdict === 'good') {
-    return `${label} on ${chart} still beats paying cash after fees, at ${cents} per point.`
-  }
-  return `${label} on ${chart} returns ${cents} per point after fees, below a 1.2¢ cash value — pay cash.`
+  return `${label} on ${chart} returns ${cents} per point after fees — pay cash.`
 }
 
 export function formatEuro(value: number): string {
@@ -116,4 +115,12 @@ export function formatPct(ratio: number): string {
 export function formatCents(value: number): string {
   if (!Number.isFinite(value)) return '0.00¢'
   return `${value.toFixed(2)}¢`
+}
+
+/** Effective out-of-pocket cost for ranking (cash or points valued). */
+export function effectiveCost(cash: number, fees: number, points: number, centsPerPoint = DEFAULT_CENTS_PER_POINT): number {
+  if (points <= 0) return cash
+  const { netSaving, verdict } = calculateSavings({ cash, fees, points, centsPerPoint })
+  if (verdict === 'pay_cash') return cash
+  return cash - netSaving
 }

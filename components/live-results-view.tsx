@@ -8,7 +8,8 @@ import { FilterBottomSheet } from '@/components/filter-bottom-sheet'
 import { OfferCard } from '@/components/offer-card'
 import { ResultsFilterPanel } from '@/components/results-filter-panel'
 import { placeName } from '@/lib/data'
-import { formatRange } from '@/lib/dates'
+import { awardCurrencyForAirlineCode } from '@/lib/cards/award-currency'
+import type { OfferWithPlan } from '@/lib/cards/enrich-offers'
 import type { FlightOffer } from '@/lib/providers/types'
 import { formatEuro, formatPct } from '@/lib/savings'
 import { activeFilterCount, applyFilters, defaultFilters } from '@/lib/search'
@@ -27,8 +28,10 @@ export function LiveResultsView({
   savingsAmount,
   savingsPct,
   alternatives,
+  offerPlans,
   resultsPath,
   userVerified,
+  isSampleProfile,
   error,
 }: {
   originLabel: string
@@ -40,10 +43,13 @@ export function LiveResultsView({
   savingsAmount: number
   savingsPct: number
   alternatives: FlightOffer[]
+  offerPlans: OfferWithPlan[]
   resultsPath: string
   userVerified: boolean
+  isSampleProfile: boolean
   error?: string
 }) {
+  const planById = useMemo(() => new Map(offerPlans.map((p) => [p.offer.id, p])), [offerPlans])
   const [sort, setSort] = useState<SortMode>('cheapest')
   const [filters, setFilters] = useState<FlightFilters>(defaultFilters)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -181,15 +187,21 @@ export function LiveResultsView({
               <p className="mt-2 text-sm text-[#76675c]">Try different dates or airports. Duffel test mode covers limited routes.</p>
             </article>
           ) : (
-            flights.map((offer) => (
-              <OfferCard
-                key={offer.id}
-                offer={offer}
-                normalPrice={normalPrice}
-                resultsPath={resultsPath}
-                userVerified={userVerified}
-              />
-            ))
+            flights.map((offer) => {
+              const enriched = planById.get(offer.id)
+              return (
+                <OfferCard
+                  key={offer.id}
+                  offer={offer}
+                  normalPrice={normalPrice}
+                  resultsPath={resultsPath}
+                  userVerified={userVerified}
+                  isSampleProfile={isSampleProfile}
+                  pointsPlan={enriched?.pointsPlan ?? null}
+                  planCurrencyId={awardCurrencyForAirlineCode(offer.airlineCode) ?? undefined}
+                />
+              )
+            })
           )}
         </div>
       </div>
@@ -205,8 +217,4 @@ export function LiveResultsView({
       />
     </>
   )
-}
-
-export function buildWhenLabel(depart: string, returnDate: string) {
-  return formatRange(depart, returnDate)
 }

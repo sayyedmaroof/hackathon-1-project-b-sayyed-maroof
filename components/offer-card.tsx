@@ -5,6 +5,8 @@ import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/button'
 import { OfferDrawer } from '@/components/offer-drawer'
 import { SavingsBadge } from '@/components/savings-badge'
+import { awardChipLabel } from '@/lib/cards/chip-label'
+import type { PointsPlan } from '@/lib/cards/types'
 import type { FlightOffer } from '@/lib/providers/types'
 import { calculateSavings, formatCents, formatEuro, formatPct, formatPoints } from '@/lib/savings'
 import { cn } from '@/lib/utils'
@@ -14,12 +16,19 @@ export function OfferCard({
   normalPrice,
   resultsPath,
   userVerified,
+  isSampleProfile,
+  pointsPlan,
+  planCurrencyId,
 }: {
   offer: FlightOffer
   normalPrice: number
   resultsPath: string
   userVerified: boolean
+  isSampleProfile: boolean
+  pointsPlan: PointsPlan | null
+  planCurrencyId?: string
 }) {
+  const chip = offer.kind === 'award' && offer.points > 0 ? awardChipLabel(pointsPlan, planCurrencyId) : null
   const [open, setOpen] = useState(false)
   const savings = calculateSavings({
     cash: offer.cashPrice,
@@ -41,6 +50,7 @@ export function OfferCard({
         </div>
         <div className="flex flex-col items-end gap-1">
           {offer.isSampleAward ? <span className="mock-label">Sample award data</span> : null}
+          {chip ? <span className="status text-[11px]">{chip}</span> : null}
           <SavingsBadge cash={offer.cashPrice} fees={offer.fees} points={offer.points} />
         </div>
       </div>
@@ -101,6 +111,9 @@ export function OfferCard({
           normalPrice={normalPrice}
           resultsPath={resultsPath}
           userVerified={userVerified}
+          isSampleProfile={isSampleProfile}
+          pointsPlan={pointsPlan}
+          planCurrencyId={planCurrencyId}
           onClose={() => setOpen(false)}
         />
       ) : null}

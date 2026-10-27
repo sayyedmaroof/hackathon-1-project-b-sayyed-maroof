@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
-import { Heart, Search, X } from 'lucide-react'
+import { Heart, Search, WalletCards, X } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
 
@@ -11,6 +11,7 @@ const items: { href: string; label: string; icon: ReactNode }[] = [
   { href: '/', label: 'Home', icon: <Heart className="size-4" /> },
   { href: '/search', label: 'Search', icon: <Search className="size-4" /> },
   { href: '/bookings', label: 'Bookings', icon: <Heart className="size-4" /> },
+  { href: '/wallet', label: 'Wallet', icon: <WalletCards className="size-4" /> },
 ]
 
 export function AppNavSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {

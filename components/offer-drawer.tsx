@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { bookCashOffer, markAwardBooked } from '@/app/actions/booking'
 import { Button } from '@/components/button'
+import { PointsPathPanel } from '@/components/points-path-panel'
+import type { PointsPlan } from '@/lib/cards/types'
 import { AWARD_STEPS } from '@/lib/loyalty'
 import type { FlightOffer } from '@/lib/providers/types'
 import { calculateSavings, formatCents, formatEuro, formatPct, formatPoints } from '@/lib/savings'
@@ -17,12 +19,18 @@ export function OfferDrawer({
   normalPrice,
   resultsPath,
   userVerified,
+  isSampleProfile,
+  pointsPlan,
+  planCurrencyId,
   onClose,
 }: {
   offer: FlightOffer
   normalPrice: number
   resultsPath: string
   userVerified: boolean
+  isSampleProfile: boolean
+  pointsPlan: PointsPlan | null
+  planCurrencyId?: string
   onClose: () => void
 }) {
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -141,6 +149,16 @@ export function OfferDrawer({
           <h3 className="font-semibold">Why this works</h3>
           <p className="mt-2 text-sm text-[#66584e]">{offer.whyThisWorks}</p>
         </section>
+
+        {offer.kind === 'award' && offer.points > 0 && pointsPlan ? (
+          <PointsPathPanel
+            plan={pointsPlan}
+            currencyId={planCurrencyId}
+            isSampleProfile={isSampleProfile}
+            userVerified={userVerified}
+            resultsPath={resultsPath}
+          />
+        ) : null}
 
         {!userVerified ? (
           <div className="mt-6">

@@ -1,10 +1,14 @@
 import { Suspense } from 'react'
 import { ShellLayout } from '@/components/shell-layout'
-import { LiveResultsView, buildWhenLabel } from '@/components/live-results-view'
+import { LiveResultsView } from '@/components/live-results-view'
 import { ResultSkeletonList } from '@/components/result-skeleton'
 import { searchFlightsFromParams } from '@/app/actions/search'
 import { getCurrentUser } from '@/lib/auth/current-user'
 import { placeName } from '@/lib/data'
+import { formatRange } from '@/lib/dates'
+import { loadWalletForUser } from '@/lib/cards/wallet-db'
+import { SAMPLE_WALLET } from '@/lib/cards/constants'
+import { enrichAlternativesWithPlans } from '@/lib/cards/enrich-offers'
 import { effectiveCost } from '@/lib/savings'
 
 async function ResultsContent({ searchParams }: { searchParams: Record<string, string | undefined> }) {
@@ -35,19 +39,26 @@ async function ResultsContent({ searchParams }: { searchParams: Record<string, s
     ? Math.round(effectiveCost(best.cashPrice, best.fees, best.points))
     : result.normalPrice
 
+  const userVerified = !!user?.emailVerifiedAt
+  const wallet =
+    userVerified && user ? await loadWalletForUser(user.id) : SAMPLE_WALLET
+  const enriched = enrichAlternativesWithPlans(result.alternatives, wallet)
+
   return (
     <LiveResultsView
       originLabel={placeName(query.originCode)}
       destinationLabel={placeName(query.destinationCode)}
-      whenLabel={buildWhenLabel(query.depart, query.returnDate)}
+      whenLabel={formatRange(query.depart, query.returnDate)}
       cabin={query.cabin}
       normalPrice={result.normalPrice}
       bestPrice={bestPrice}
       savingsAmount={result.savings.amount}
       savingsPct={result.savings.pct}
       alternatives={result.alternatives}
+      offerPlans={enriched}
       resultsPath={resultsPath}
-      userVerified={!!user?.emailVerifiedAt}
+      userVerified={userVerified}
+      isSampleProfile={!userVerified}
       error={result.error}
     />
   )

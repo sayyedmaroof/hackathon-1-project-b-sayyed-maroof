@@ -7,7 +7,9 @@ import { bookings } from '@/lib/db/schema'
 import { bookCashSchema, markAwardBookedSchema } from '@/lib/auth/schemas'
 import { requireVerifiedUser } from '@/lib/auth/session'
 import { createDuffelOrder } from '@/lib/providers/duffel'
-import { effectiveCost } from '@/lib/savings'
+import { planForAwardOffer } from '@/lib/cards/enrich-offers'
+import { resolveSampleAwardOffer } from '@/lib/cards/resolve-award-offer'
+import { loadWalletForUser } from '@/lib/cards/wallet-db'
 
 function savingEur(normalPrice: number, paid: number): string {
   return String(Math.max(0, Math.round(normalPrice - paid)))
@@ -99,7 +101,20 @@ export async function markAwardBooked(_prev: unknown, formData: FormData) {
   if (!parsed.success) return { error: 'Invalid booking data.' }
 
   const data = parsed.data
-  const paid = effectiveCost(data.cashPrice, data.awardFees, data.awardPoints)
+  const offer = await resolveSampleAwardOffer({
+    offerKey: data.offerKey,
+    origin: data.origin,
+    destination: data.destination,
+    departDate: data.departDate,
+    returnDate: data.returnDate,
+    cabin: data.cabin,
+  })
+  if (!offer) return { error: 'Award offer not found.' }
+
+  const wallet = await loadWalletForUser(user.id)
+  const { pointsPlan } = planForAwardOffer(offer, wallet)
+  const plannerSaving = pointsPlan?.recommended.netSavingEur ?? 0
+
   const inserted = await db
     .insert(bookings)
     .values({
@@ -111,10 +126,10 @@ export async function markAwardBooked(_prev: unknown, formData: FormData) {
       departDate: data.departDate,
       returnDate: data.returnDate,
       cabin: data.cabin,
-      cashPrice: String(data.cashPrice),
-      awardPoints: String(data.awardPoints),
-      awardFees: String(data.awardFees),
-      savingEur: savingEur(data.normalPrice, paid),
+      cashPrice: String(offer.cashPrice),
+      awardPoints: String(offer.points),
+      awardFees: String(offer.fees),
+      savingEur: String(Math.max(0, Math.round(plannerSaving))),
       status: 'confirmed',
       passengers: data.passengers,
     })

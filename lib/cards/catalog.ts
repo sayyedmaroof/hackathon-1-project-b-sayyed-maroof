@@ -33,9 +33,9 @@ export const CARD_CATALOG: CatalogCard[] = [
     programName: 'Iberia Plus Avios',
     applyUrl: 'https://www.iberiacards.es/tarjetas-personales/iberia-icon/',
     imagePath: '/cards/iberia_icon.png',
-    // ASSUMPTION — not published on the source page.
-    baseEarnPerEur: 1 / 10,
-    categoryEarn: { travel: 2 / 10, dining: 1.5 / 10 },
+    // ASSUMPTION — demo earn so everyday spend can close sample trips in months, not years.
+    baseEarnPerEur: 1.5,
+    categoryEarn: { travel: 2.5, dining: 1.5 },
     monthlyCapPoints: null,
     annualFeeEur: 120,
     monthlyFeeEur: null,
@@ -56,8 +56,8 @@ export const CARD_CATALOG: CatalogCard[] = [
     programName: 'Iberia Plus Avios',
     applyUrl: 'https://www.iberiacards.es/tarjetas-personales/iberia-aire/',
     imagePath: '/cards/iberia_icon_aire.png',
-    // ASSUMPTION — not published on the source page.
-    baseEarnPerEur: 1 / 12,
+    // ASSUMPTION — demo earn so everyday spend can close sample trips in months, not years.
+    baseEarnPerEur: 1.2,
     monthlyCapPoints: null,
     annualFeeEur: 60,
     monthlyFeeEur: null,
@@ -78,9 +78,9 @@ export const CARD_CATALOG: CatalogCard[] = [
     programName: 'Iberia Plus Avios',
     applyUrl: 'https://www.iberiacards.es/tarjetas-personales/iberia-zenit/',
     imagePath: '/cards/iberia_zenit_gold.png',
-    // ASSUMPTION — not published on the source page.
-    baseEarnPerEur: 1 / 8,
-    categoryEarn: { travel: 2 / 8 },
+    // ASSUMPTION — demo earn so everyday spend can close sample trips in months, not years.
+    baseEarnPerEur: 1.8,
+    categoryEarn: { travel: 2.5 },
     monthlyCapPoints: null,
     annualFeeEur: 150,
     monthlyFeeEur: null,
@@ -171,9 +171,9 @@ export const CARD_CATALOG: CatalogCard[] = [
     applyUrl:
       'https://www.aireuropa.com/es/es/aea/suma/nuestro-programa/nuestros-partners/financiero/visa-aireuropa-suma.html',
     imagePath: '/cards/air_europa_bankinter.jpg',
-    // ASSUMPTION — not published on the source page.
-    baseEarnPerEur: 1 / 6,
-    categoryEarn: { travel: 2 / 6 },
+    // ASSUMPTION — demo earn so everyday spend can close sample trips in months, not years.
+    baseEarnPerEur: 0.8,
+    categoryEarn: { travel: 1.2 },
     monthlyCapPoints: null,
     annualFeeEur: 40,
     monthlyFeeEur: null,
@@ -194,9 +194,9 @@ export const CARD_CATALOG: CatalogCard[] = [
     programName: 'Vueling Club Avios',
     applyUrl: 'https://www.vueling.com/es/vueling-club/vueling-visa',
     imagePath: '/cards/vueling_up.png',
-    // ASSUMPTION — not published on the source page. Cap is a model limit, not an issuer quote.
-    baseEarnPerEur: 1 / 8,
-    categoryEarn: { travel: 2 / 8 },
+    // ASSUMPTION — demo earn so everyday spend can close sample trips in months, not years. Cap is a model limit.
+    baseEarnPerEur: 1.2,
+    categoryEarn: { travel: 3 },
     monthlyCapPoints: 5000,
     annualFeeEur: 45,
     monthlyFeeEur: null,
@@ -217,8 +217,8 @@ export const CARD_CATALOG: CatalogCard[] = [
     programName: 'Miles & More',
     applyUrl: 'https://www.caixabank.es/particular/tarjetas/visa-miles-and-more.html',
     imagePath: '/cards/miles_and_more_caixabank.png',
-    // ASSUMPTION — not published on the source page.
-    baseEarnPerEur: 1 / 5,
+    // ASSUMPTION — demo earn so everyday spend can close sample trips in months, not years.
+    baseEarnPerEur: 1,
     monthlyCapPoints: null,
     annualFeeEur: 55,
     monthlyFeeEur: null,

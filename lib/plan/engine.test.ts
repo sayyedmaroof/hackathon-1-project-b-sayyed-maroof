@@ -308,7 +308,7 @@ describe('projection past ready-by', () => {
 
   it('returns targetReachedDate and monthsLate when short', () => {
     const plan = computeSpendPlan({
-      trip: { ...lisEco, pointsRequired: 2500 },
+      trip: { ...lisEco, pointsRequired: 20000 },
       wallet: {
         cards: [{ cardId: 'iberia_icon', revolutPlan: null }],
         balances: [],

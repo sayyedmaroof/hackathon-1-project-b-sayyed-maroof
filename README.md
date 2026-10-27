@@ -28,6 +28,7 @@ Refresh card images with `node scripts/fetch-card-images.mjs` (confirm you are a
 | Sample trips, award charts, `typicalCashEur` | Illustrative |
 | Duffel live fare (`duffel_live_` key) | Real published cash fare for that trip and date |
 | Duffel test fare (`duffel_test_` key) | Sandbox only; displayed, never used in net saving or ranking |
+| Groq plan copy (`GROQ_API_KEY`) | Optional. Rewrites the computed plan into a summary and chat answers. Missing key, rate limit, or model failure leaves the result tables as they are. Groq never changes net saving or status. |
 
 ## How to swap in real data later
 

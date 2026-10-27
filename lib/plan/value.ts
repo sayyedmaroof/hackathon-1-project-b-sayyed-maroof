@@ -46,6 +46,32 @@ export function netSavingUnclamped(input: {
   return input.cashEur - input.taxesEur - pointsValue - input.feesEur
 }
 
+/** Cash ticket vs what you still pay on the points path (award taxes + card fees). */
+export function cashVersusHacked(input: { cashEur: number; taxesEur: number; feesEur: number }): {
+  realCostEur: number
+  hackedCostEur: number
+  youSaveEur: number
+} {
+  const realCostEur = input.cashEur
+  const hackedCostEur = Math.max(0, input.taxesEur) + Math.max(0, input.feesEur)
+  return {
+    realCostEur,
+    hackedCostEur,
+    youSaveEur: realCostEur - hackedCostEur,
+  }
+}
+
+export function feesFromNetSaving(input: {
+  cashEur: number
+  taxesEur: number
+  pointsRequired: number
+  currency: PointCurrencyId
+  netSavingEur: number
+}): number {
+  const pointsValue = (input.pointsRequired * centsPerPointFor(input.currency)) / 100
+  return input.cashEur - input.taxesEur - pointsValue - input.netSavingEur
+}
+
 export function verdictFor(netSavingEur: number, cashEur: number): PlanVerdict {
   if (netSavingEur >= GREAT_MIN_EUR && cashEur > 0 && netSavingEur >= cashEur * GREAT_MIN_RATIO) {
     return 'great'

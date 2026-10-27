@@ -31,6 +31,7 @@ function simulateMax(
   while (changed && guard++ < 50) {
     changed = false
     for (const edge of edges) {
+      if (edge.from === target) continue
       const fromAmt = pool.get(edge.from) ?? 0
       const move = transferable(fromAmt, edge)
       if (move <= 0) continue

@@ -43,6 +43,11 @@ export type CatalogCard = {
   name: string
   issuer: string
   currency: PointCurrencyId
+  description_es: string
+  description_en: string
+  programName: string
+  applyUrl: string
+  imagePath: string
   baseEarnPerEur: number
   categoryEarn?: CategoryEarn
   monthlyCapPoints: number | null

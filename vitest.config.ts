@@ -11,6 +11,8 @@ export default defineConfig({
       'lib/providers/**/*.test.ts',
       'lib/search/**/*.test.ts',
       'lib/booking/**/*.test.ts',
+      'lib/plan/**/*.test.ts',
+      'lib/trips/**/*.test.ts',
     ],
   },
   resolve: {

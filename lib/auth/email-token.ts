@@ -18,19 +18,18 @@ export type ConsumeResult = { ok: true; userId: string } | { ok: false; reason: 
 export async function consumeEmailVerificationToken(token: string): Promise<ConsumeResult> {
   const tokenHash = sha256(token)
   const now = new Date()
-  const rows = await db
-    .select()
-    .from(emailTokens)
-    .where(and(eq(emailTokens.tokenHash, tokenHash), gt(emailTokens.expiresAt, now), isNull(emailTokens.usedAt)))
-    .limit(1)
-  const row = rows[0]
-  if (!row) {
+  const consumed = await db
+    .update(emailTokens)
+    .set({ usedAt: now })
+    .where(and(eq(emailTokens.tokenHash, tokenHash), isNull(emailTokens.usedAt), gt(emailTokens.expiresAt, now)))
+    .returning({ userId: emailTokens.userId })
+  const userId = consumed[0]?.userId
+  if (!userId) {
     const any = await db.select().from(emailTokens).where(eq(emailTokens.tokenHash, tokenHash)).limit(1)
     if (!any[0]) return { ok: false, reason: 'invalid' }
     if (any[0].usedAt) return { ok: false, reason: 'used' }
     return { ok: false, reason: 'expired' }
   }
-  await db.update(emailTokens).set({ usedAt: now }).where(eq(emailTokens.id, row.id))
-  await db.update(users).set({ emailVerifiedAt: now }).where(eq(users.id, row.userId))
-  return { ok: true, userId: row.userId }
+  await db.update(users).set({ emailVerifiedAt: now }).where(eq(users.id, userId))
+  return { ok: true, userId }
 }

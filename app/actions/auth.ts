@@ -15,6 +15,12 @@ import { sendVerificationEmail } from '@/lib/email/brevo'
 
 const LOGIN_ERROR = 'Invalid email or password'
 
+let unknownEmailHash: Promise<string> | null = null
+function dummyUnknownEmailHash() {
+  unknownEmailHash ??= hashPassword('not-a-real-user')
+  return unknownEmailHash
+}
+
 export type AuthState = { error?: string; message?: string }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -58,7 +64,9 @@ export async function logIn(_prev: AuthState, formData: FormData): Promise<AuthS
   const { email, password } = parsed.data
   const rows = await db.select().from(users).where(eq(users.email, email)).limit(1)
   const user = rows[0]
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+  const hash = user?.passwordHash ?? (await dummyUnknownEmailHash())
+  const passwordOk = await verifyPassword(password, hash)
+  if (!user || !passwordOk) {
     return { error: LOGIN_ERROR }
   }
   if (!user.emailVerifiedAt) {
@@ -99,4 +107,13 @@ export async function verifyEmailToken(token: string): Promise<{ ok: boolean; re
   const result = await consumeEmailVerificationToken(token)
   if (!result.ok) return { ok: false, reason: result.reason }
   return { ok: true }
+}
+
+export async function confirmEmailVerification(formData: FormData): Promise<void> {
+  const token = String(formData.get('token') ?? '')
+  const result = await consumeEmailVerificationToken(token)
+  if (!result.ok) {
+    redirect('/verify-email')
+  }
+  redirect('/login')
 }

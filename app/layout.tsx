@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'FareFlip — Travel smarter. Pay less.',
+  title: 'A Una Milla — Travel smarter. Pay less.',
   description: 'Compare cash fares, points, fees, and smarter routes to find more value from every trip.',
   generator: 'v0.app',
   icons: {

@@ -1,0 +1,71 @@
+import { Suspense } from 'react'
+import { ShellLayout } from '@/components/shell-layout'
+import { LiveResultsView, buildWhenLabel } from '@/components/live-results-view'
+import { ResultSkeletonList } from '@/components/result-skeleton'
+import { searchFlightsFromParams } from '@/app/actions/search'
+import { getCurrentUser } from '@/lib/auth/current-user'
+import { placeName } from '@/lib/data'
+import { effectiveCost } from '@/lib/savings'
+
+async function ResultsContent({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+  const user = await getCurrentUser()
+  const { query, result } = await searchFlightsFromParams(searchParams)
+
+  if (!query || !result) {
+    return (
+      <article className="panel">
+        <h2 className="text-2xl font-semibold">Invalid search</h2>
+        <p className="mt-2 text-sm text-[#76675c]">Check origin, destination, and dates, then try again.</p>
+      </article>
+    )
+  }
+
+  const resultsPath = `/results?${new URLSearchParams({
+    origin: query.originCode,
+    destination: query.destinationCode,
+    depart: query.depart,
+    return: query.returnDate,
+    cabin: query.cabin,
+    flexible: query.flexible ? '1' : '0',
+    adults: String(query.adults),
+  }).toString()}`
+
+  const best = result.best
+  const bestPrice = best
+    ? Math.round(effectiveCost(best.cashPrice, best.fees, best.points))
+    : result.normalPrice
+
+  return (
+    <LiveResultsView
+      originLabel={placeName(query.originCode)}
+      destinationLabel={placeName(query.destinationCode)}
+      whenLabel={buildWhenLabel(query.depart, query.returnDate)}
+      cabin={query.cabin}
+      normalPrice={result.normalPrice}
+      bestPrice={bestPrice}
+      savingsAmount={result.savings.amount}
+      savingsPct={result.savings.pct}
+      alternatives={result.alternatives}
+      resultsPath={resultsPath}
+      userVerified={!!user?.emailVerifiedAt}
+      error={result.error}
+    />
+  )
+}
+
+export default async function ResultsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>
+}) {
+  const user = await getCurrentUser()
+  const params = await searchParams
+
+  return (
+    <ShellLayout user={user}>
+      <Suspense fallback={<ResultSkeletonList />}>
+        <ResultsContent searchParams={params} />
+      </Suspense>
+    </ShellLayout>
+  )
+}

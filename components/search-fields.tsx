@@ -7,14 +7,15 @@ import { Button } from '@/components/button'
 import { DateField } from '@/components/date-field'
 import { cabins, modes, searchExamples, travelers } from '@/lib/data'
 import { formatRange } from '@/lib/dates'
-import { navigate } from '@/lib/hash-view'
-import { markResultsLoading } from '@/lib/search-navigation'
+import { useRouter } from 'next/navigation'
+import { searchQueryToResultsUrl } from '@/lib/search/results-url'
 import { validateSearch } from '@/lib/search'
 import { useApp } from '@/lib/store'
 import type { FlightOption, SearchErrors, SearchQuery } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 export function SearchFields({ variant }: { variant: 'hero' | 'page' }) {
+  const router = useRouter()
   const { state, patchSearch } = useApp()
   const search = state.search
   const [errors, setErrors] = useState<SearchErrors>({})
@@ -38,8 +39,7 @@ export function SearchFields({ variant }: { variant: 'hero' | 'page' }) {
     setLoading(true)
     timer.current = window.setTimeout(() => {
       setLoading(false)
-      markResultsLoading()
-      navigate('results')
+      router.push(searchQueryToResultsUrl(next))
     }, 600)
   }
 

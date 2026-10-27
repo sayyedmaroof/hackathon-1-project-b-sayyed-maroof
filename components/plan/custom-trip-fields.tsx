@@ -1,5 +1,6 @@
 'use client'
 
+import { PlaceSearch } from '@/components/plan/place-search'
 import type { CustomTripDraft } from '@/lib/trips/catalog'
 
 const AWARD_OPTIONS: { id: CustomTripDraft['awardCurrency']; label: string }[] = [
@@ -21,42 +22,18 @@ export function CustomTripFields({
 
   return (
     <div className="mt-4 grid gap-3 sm:grid-cols-2">
-      <label className="text-sm font-semibold">
-        Origin city
-        <input
-          className="mt-1 min-h-11 w-full rounded-xl border border-[#e1d6c8] px-3"
-          value={value.origin}
-          onChange={(e) => patch({ origin: e.target.value })}
-        />
-      </label>
-      <label className="text-sm font-semibold">
-        Origin airport
-        <input
-          className="mt-1 min-h-11 w-full rounded-xl border border-[#e1d6c8] px-3 uppercase"
-          maxLength={3}
-          value={value.originIata}
-          onChange={(e) => patch({ originIata: e.target.value.toUpperCase() })}
-          placeholder="MAD"
-        />
-      </label>
-      <label className="text-sm font-semibold">
-        Destination city
-        <input
-          className="mt-1 min-h-11 w-full rounded-xl border border-[#e1d6c8] px-3"
-          value={value.destination}
-          onChange={(e) => patch({ destination: e.target.value })}
-        />
-      </label>
-      <label className="text-sm font-semibold">
-        Destination airport
-        <input
-          className="mt-1 min-h-11 w-full rounded-xl border border-[#e1d6c8] px-3 uppercase"
-          maxLength={3}
-          value={value.destinationIata}
-          onChange={(e) => patch({ destinationIata: e.target.value.toUpperCase() })}
-          placeholder="LIS"
-        />
-      </label>
+      <PlaceSearch
+        label="Origin"
+        city={value.origin}
+        iata={value.originIata}
+        onPick={(hit) => patch({ origin: hit.city, originIata: hit.iata })}
+      />
+      <PlaceSearch
+        label="Destination"
+        city={value.destination}
+        iata={value.destinationIata}
+        onPick={(hit) => patch({ destination: hit.city, destinationIata: hit.iata })}
+      />
       <label className="text-sm font-semibold">
         Cabin
         <select
@@ -124,7 +101,8 @@ export function CustomTripFields({
         />
       </label>
       <p className="sm:col-span-2 text-xs text-[#76675c]">
-        Custom values are yours — not live availability or a real award chart. Live cash check stays on catalog trips.
+        Airports come from Duffel place search when a key is set, otherwise the sample airport list. Cash can be checked
+        live after you pick a date. Points stay a sample you confirm.
       </p>
     </div>
   )

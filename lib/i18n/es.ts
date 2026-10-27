@@ -1,0 +1,71 @@
+import type { Messages } from './en'
+
+export const es: Messages = {
+  skip: 'Saltar al contenido',
+  nav: {
+    plan: 'Plan',
+    saved: 'Planes guardados',
+    login: 'Entrar',
+    logout: 'Salir',
+    account: 'Cuenta',
+    menu: 'Menú',
+  },
+  footer: {
+    privacy: 'Privacidad',
+    terms: 'Términos',
+    disclaimer: 'No es asesoramiento financiero.',
+    rates: 'Tipos ilustrativos, verifícalos con el emisor',
+    catalog: 'Fuente del catálogo: A una milla de tu destino',
+    contact: 'Contacto',
+  },
+  home: {
+    eyebrow: 'Plan de gasto para viajeros en España',
+    title: 'Consigue los puntos del viaje.',
+    titleEm: 'Luego resérvalo tú.',
+    promise:
+      'FareFlip indica qué tarjetas usar para tener puntos a tiempo y cuánto ahorras frente a pagar en efectivo.',
+    cta: 'Planificar mi gasto',
+    example: 'Plan de ejemplo',
+    exampleNote: 'Ejemplo, cifras ilustrativas',
+    step1: 'Elige tus tarjetas',
+    step1body: 'Selecciona las tarjetas que ya tienes del catálogo de España.',
+    step2: 'Elige tu viaje',
+    step2body: 'Elige un viaje de muestra y la fecha en la que quieres volar.',
+    step3: 'Sigue tu plan de gasto',
+    step3body: 'Mira qué tarjeta usar en cada categoría, mes a mes.',
+    what: 'Qué obtienes',
+    faqTitle: 'Preguntas frecuentes',
+    faqBookQ: '¿Reserváis vuelos?',
+    faqBookA: 'No. FareFlip no reserva vuelos ni busca plazas award. Tú reservas cuando los puntos estén listos.',
+    faqNumbersQ: '¿De dónde salen las cifras?',
+    faqNumbersA:
+      'La acumulación y las cuotas son ilustrativas salvo que estén verificadas. El precio en efectivo puede venir de Duffel si hay clave en vivo.',
+    faqFreeQ: '¿Es gratis?',
+    faqFreeA: 'Sí. Puedes planificar como invitado. La cuenta solo sirve para guardar planes en el servidor.',
+    faqDataQ: '¿Qué pasa con mis datos?',
+    faqDataA: 'Los invitados guardan la cartera en este navegador. Las cuentas guardan tarjetas, saldos, gasto y planes.',
+    trust: 'Tipos ilustrativos. Verifícalos con el emisor. Duffel solo se usa para tarifas en efectivo.',
+  },
+  plan: {
+    title: 'Planifica tu gasto',
+    pickCards: 'Elige al menos una tarjeta',
+    savedDevice: 'Guardado en este dispositivo',
+  },
+  plans: {
+    title: 'Planes guardados',
+    empty: 'Aún no hay planes guardados',
+    open: 'Abrir',
+    delete: 'Eliminar plan',
+  },
+  auth: {
+    signIn: 'Entrar',
+    signUp: 'Crear cuenta',
+    password: 'Contraseña',
+    show: 'Mostrar contraseña',
+    hide: 'Ocultar contraseña',
+  },
+  legal: {
+    privacyTitle: 'Privacidad',
+    termsTitle: 'Términos',
+  },
+}

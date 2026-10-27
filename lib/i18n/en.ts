@@ -1,0 +1,71 @@
+export const en = {
+  skip: 'Skip to content',
+  nav: {
+    plan: 'Plan',
+    saved: 'Saved plans',
+    login: 'Log in',
+    logout: 'Log out',
+    account: 'Account',
+    menu: 'Menu',
+  },
+  footer: {
+    privacy: 'Privacy',
+    terms: 'Terms',
+    disclaimer: 'Not financial advice.',
+    rates: 'Illustrative rates, verify with the issuer',
+    catalog: 'Card catalog source: A una milla de tu destino',
+    contact: 'Contact',
+  },
+  home: {
+    eyebrow: 'Spend planning for travellers in Spain',
+    title: 'Get the points for the trip.',
+    titleEm: 'Then book it yourself.',
+    promise:
+      'FareFlip shows which of your cards to use so you have enough points by your ready-by date, and what you net-save versus paying cash.',
+    cta: 'Plan my spend',
+    example: 'Example plan',
+    exampleNote: 'Example, illustrative numbers',
+    step1: 'Pick your cards',
+    step1body: 'Choose every card you already hold from the Spain catalog.',
+    step2: 'Pick your trip',
+    step2body: 'Select a sample trip and the date you want to fly.',
+    step3: 'Follow your spend plan',
+    step3body: 'See which card to use for each kind of spend, month by month.',
+    what: 'What you get',
+    faqTitle: 'FAQ',
+    faqBookQ: 'Do you book flights?',
+    faqBookA: 'No. FareFlip does not book flights or search award seats. You book later, when the points are ready.',
+    faqNumbersQ: 'Where do the numbers come from?',
+    faqNumbersA:
+      'Card earn and fees are labelled illustrative unless marked verified. Cash fares can come from Duffel when a live key is configured.',
+    faqFreeQ: 'Is it free?',
+    faqFreeA: 'Yes. You can plan as a guest. An account is only needed to save plans on the server.',
+    faqDataQ: 'What happens to my data?',
+    faqDataA: 'Guests keep wallet data in this browser. Accounts store cards, balances, spend and saved plans.',
+    trust: 'Illustrative rates. Verify with the issuer. Duffel is used only for cash fares.',
+  },
+  plan: {
+    title: 'Plan your spend',
+    pickCards: 'Pick at least one card',
+    savedDevice: 'Saved on this device',
+  },
+  plans: {
+    title: 'Saved plans',
+    empty: 'No saved plans yet',
+    open: 'Open',
+    delete: 'Delete plan',
+  },
+  auth: {
+    signIn: 'Sign in',
+    signUp: 'Create account',
+    password: 'Password',
+    show: 'Show password',
+    hide: 'Hide password',
+  },
+  legal: {
+    privacyTitle: 'Privacy',
+    termsTitle: 'Terms',
+  },
+}
+
+export type Messages = typeof en

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import type { CatalogCard, RevolutPlanId } from '@/lib/cards/types'
 import { ILLUSTRATIVE_RATES_LABEL } from '@/lib/cards/constants'
 
@@ -28,20 +29,22 @@ export function CardTile({
     >
       <button
         type="button"
-        role="radio"
+        role="checkbox"
         aria-checked={selected}
         onClick={onSelect}
         className="min-h-11 text-left"
       >
         <div className="mb-3 overflow-hidden rounded-xl bg-[#eee4d8]">
           {imgFailed ? (
-            <div className="grid h-28 place-items-center text-3xl font-semibold text-[#66584e]">{letter}</div>
+            <div className="grid h-28 place-items-center text-3xl font-semibold text-ink-muted">{letter}</div>
           ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={card.imagePath}
               alt=""
+              width={400}
+              height={160}
               className="h-28 w-full object-contain"
+              sizes="(max-width: 768px) 100vw, 40vw"
               onError={() => setImgFailed(true)}
             />
           )}

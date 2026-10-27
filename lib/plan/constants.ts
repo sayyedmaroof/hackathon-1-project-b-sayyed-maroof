@@ -19,3 +19,4 @@ export const GREAT_MIN_EUR = 400
 export const GREAT_MIN_RATIO = 0.15
 
 export const FALLBACK_FARE_NOTE = 'Live fare unavailable, using a sample estimate'
+export const RATE_LIMIT_FARE_NOTE = 'Too many live checks, try again in a few minutes'

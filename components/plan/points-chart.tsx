@@ -34,12 +34,12 @@ export function PointsChart({
         return <circle key={row.date} cx={x} cy={y} r="3" fill="#b86632" />
       })}
       {first ? (
-        <text x={pad} y={height + 12} fontSize="9" fill="#76675c">
+        <text x={pad} y={height + 12} fontSize="12" fill="#4f433b">
           {first}
         </text>
       ) : null}
       {last && last !== first ? (
-        <text x={width - pad} y={height + 12} fontSize="9" fill="#76675c" textAnchor="end">
+        <text x={width - pad} y={height + 12} fontSize="12" fill="#4f433b" textAnchor="end">
           {last}
         </text>
       ) : null}

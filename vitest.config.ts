@@ -13,6 +13,8 @@ export default defineConfig({
       'lib/booking/**/*.test.ts',
       'lib/plan/**/*.test.ts',
       'lib/trips/**/*.test.ts',
+      'lib/db/**/*.test.ts',
+      'app/actions/**/*.test.ts',
     ],
   },
   resolve: {

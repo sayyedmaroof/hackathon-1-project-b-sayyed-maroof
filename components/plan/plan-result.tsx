@@ -1,7 +1,10 @@
 'use client'
 
+import { useState } from 'react'
+import Link from 'next/link'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { DataModeLabel } from '@/components/data-mode-label'
-import { Button } from '@/components/button'
+import { Button } from '@/components/ui/button'
 import { PointsChart } from '@/components/plan/points-chart'
 import { ILLUSTRATIVE_RATES_LABEL } from '@/lib/cards/constants'
 import { POINT_CURRENCIES } from '@/lib/cards/currencies'
@@ -42,6 +45,10 @@ export function PlanResult({
   onSave: () => void
   onPickTrip: (tripId: string) => void
 }) {
+  const [guestSaveOpen, setGuestSaveOpen] = useState(false)
+  const pathname = usePathname()
+  const search = useSearchParams()
+  const next = `${pathname}?${search.toString()}`
   const program = POINT_CURRENCIES[plan.awardCurrency].displayName
   const positive = plan.status === 'on_track' || plan.status === 'ready_now'
   const headline = positive
@@ -113,18 +120,25 @@ export function PlanResult({
         </article>
         <article className="panel">
           <p className="metric-index">Cash fare</p>
-          <p className="mt-4 text-2xl font-semibold">{formatEuro(plan.cashBaseline.eur)}</p>
+          {fareLoading ? (
+            <p className="mt-4 h-8 w-28 animate-pulse rounded-md bg-[#eee4d8]" aria-busy="true">
+              <span className="sr-only">Checking live fare</span>
+            </p>
+          ) : (
+            <p className="mt-4 text-2xl font-semibold">{formatEuro(plan.cashBaseline.eur)}</p>
+          )}
           {plan.cashSource === 'duffel_live' ? (
             <p className="mt-1 text-xs text-[#76675c]">
-              Live fare
-              {plan.cashBaseline.fetchedAt ? `, checked ${formatPlanDate(plan.cashBaseline.fetchedAt.slice(0, 10))}` : ''}
+              {plan.cashBaseline.fetchedAt
+                ? `Live fare checked at ${new Date(plan.cashBaseline.fetchedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+                : 'Live fare'}
             </p>
           ) : plan.cashSource === 'duffel_test' ? (
             <div className="mt-1">
               <DataModeLabel mode="test" />
             </div>
           ) : (
-            <p className="mt-1 text-xs text-[#76675c]">Sample estimate</p>
+            <p className="mt-1 text-xs text-[#76675c]">{fareLoading ? 'Checking live fare…' : 'Sample estimate'}</p>
           )}
           {duffelConfigured ? (
             <Button className="mt-4 w-full" variant="outline" disabled={fareLoading} onClick={onCheckFare}>
@@ -215,27 +229,39 @@ export function PlanResult({
           <p className="mt-2 text-sm text-[#76675c]">No extra moves needed on this plan.</p>
         ) : (
           <ul className="mt-3 grid gap-2">
-            {plan.suggestions.map((s) => (
-              <li key={s.kind + (s.cardId ?? '') + (s.tripId ?? '')} className="panel p-4">
+            {plan.suggestions.map((s) => {
+              const apply = s.apply
+              const applyKey =
+                apply.kind === 'add_card' ? apply.cardId : apply.kind === 'switch_trip' ? apply.tripId : ''
+              return (
+              <li
+                key={s.kind + applyKey}
+                className="panel p-4"
+              >
                 <p className="text-xs font-bold uppercase tracking-[.16em] text-[#a39182]">{s.kind.replaceAll('_', ' ')}</p>
                 <p className="mt-2 text-sm leading-6">{s.reason}</p>
-                {s.tripId ? (
+                {apply.kind === 'switch_trip' ? (
                   <button
                     type="button"
                     className="mt-2 min-h-11 text-sm font-semibold text-[#b86632]"
-                    onClick={() => onPickTrip(s.tripId!)}
+                    onClick={() => onPickTrip(apply.tripId)}
                   >
                     Switch to this trip
                   </button>
                 ) : null}
               </li>
-            ))}
+            )})}
           </ul>
         )}
       </div>
 
       <div>
         <h3 className="font-semibold">Best value trips you can reach by {formatPlanDate(plan.readyByDate)}</h3>
+        {ranking && !ranking.best ? (
+          <p className="mt-2 text-sm text-[#76675c]">
+            No sample trip beats paying cash with your current cards
+          </p>
+        ) : null}
         {(ranking?.reachable ?? []).length === 0 ? (
           <p className="mt-2 text-sm text-[#76675c]">None of the sample trips are on track yet with this card and spend.</p>
         ) : (
@@ -292,7 +318,30 @@ export function PlanResult({
           {saveMessage ? <p className="mt-2 text-sm text-[#76675c]">{saveMessage}</p> : null}
         </div>
       ) : (
-        <p className="text-sm text-[#76675c]">Sign in to save this plan to your account. Guest data stays on this device.</p>
+        <div>
+          <Button variant="primary" onClick={() => setGuestSaveOpen(true)}>
+            Save this plan
+          </Button>
+          {guestSaveOpen ? (
+            <div className="fixed inset-0 z-40 grid place-items-center bg-ink/40 p-4" role="dialog" aria-modal="true">
+              <div className="max-w-md rounded-2xl bg-surface p-6">
+                <h3 className="text-lg font-semibold">Create a free account to keep this plan</h3>
+                <p className="mt-2 text-sm text-ink-muted">Your current plan stays in the URL and on this device.</p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Link href={`/signup?next=${encodeURIComponent(next)}`}>
+                    <Button variant="primary">Sign up</Button>
+                  </Link>
+                  <Link href={`/login?next=${encodeURIComponent(next)}`}>
+                    <Button variant="outline">Log in</Button>
+                  </Link>
+                  <Button variant="ghost" onClick={() => setGuestSaveOpen(false)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
       )}
     </section>
   )

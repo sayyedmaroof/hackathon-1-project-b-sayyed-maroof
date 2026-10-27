@@ -71,9 +71,23 @@ export const bookings = pgTable('bookings', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const usersRelations = relations(users, ({ many }) => ({
+export {
+  userCards,
+  userBalances,
+  userSpendProfile,
+  userCardsRelations,
+  userBalancesRelations,
+  userSpendProfileRelations,
+} from './schema-wallet'
+
+import { userCards, userBalances, userSpendProfile } from './schema-wallet'
+
+export const usersRelations = relations(users, ({ many, one }) => ({
   sessions: many(sessions),
   emailTokens: many(emailTokens),
   searches: many(searches),
   bookings: many(bookings),
+  userCards: many(userCards),
+  userBalances: many(userBalances),
+  spendProfile: one(userSpendProfile),
 }))

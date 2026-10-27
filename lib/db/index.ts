@@ -8,6 +8,19 @@ function getDatabaseUrl() {
   return url
 }
 
-export const db = drizzle(neon(getDatabaseUrl()), { schema })
+function createDatabase() {
+  return drizzle(neon(getDatabaseUrl()), { schema })
+}
 
-export type Db = typeof db
+export type Db = ReturnType<typeof createDatabase>
+
+let database: Db | undefined
+
+// Public pages can import session helpers without opening a database connection.
+export const db = new Proxy({} as Db, {
+  get(_target, property) {
+    const client = (database ??= createDatabase())
+    const value = Reflect.get(client, property, client)
+    return typeof value === 'function' ? value.bind(client) : value
+  },
+})

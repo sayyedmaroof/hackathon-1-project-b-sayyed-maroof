@@ -7,6 +7,7 @@ export default defineConfig({
     include: [
       'lib/savings.test.ts',
       'lib/auth/**/*.test.ts',
+      'lib/db/**/*.test.ts',
       'lib/cards/**/*.test.ts',
       'lib/providers/**/*.test.ts',
       'lib/search/**/*.test.ts',

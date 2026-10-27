@@ -14,7 +14,7 @@ export function ShellLayout({ user, children }: { user: SessionUser | null; chil
 
   return (
     <div className="min-h-screen bg-[#f7f2e9] text-[#2a211b]">
-      <AppNavSidebar open={open} onClose={() => setOpen(false)} />
+      <AppNavSidebar open={open} onClose={() => setOpen(false)} loggedIn={Boolean(user)} />
       <div className="lg:pl-64">
         <header className="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-[#e1d6c8] bg-[#f7f2e9]/90 px-5 backdrop-blur lg:px-10">
           <button className="min-h-11 min-w-11 lg:hidden" onClick={() => setOpen(true)} aria-label="Open navigation">

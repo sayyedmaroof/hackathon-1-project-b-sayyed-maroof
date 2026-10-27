@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm'
 import {
+  integer,
   jsonb,
   numeric,
   pgEnum,
@@ -80,6 +81,20 @@ export const bookings = pgTable(
   (t) => [uniqueIndex('bookings_user_provider_offer_uidx').on(t.userId, t.provider, t.offerId)],
 )
 
+export const savedPlans = pgTable('saved_plans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  tripId: text('trip_id').notNull(),
+  travelDate: text('travel_date').notNull(),
+  readyByDays: integer('ready_by_days').notNull(),
+  netSavingEur: numeric('net_saving_eur', { precision: 12, scale: 2 }).notNull(),
+  cashSource: text('cash_source').notNull(),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 export {
   userCards,
   userBalances,
@@ -99,4 +114,5 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   userCards: many(userCards),
   userBalances: many(userBalances),
   spendProfile: one(userSpendProfile),
+  savedPlans: many(savedPlans),
 }))

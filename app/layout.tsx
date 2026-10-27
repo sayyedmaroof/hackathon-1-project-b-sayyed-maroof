@@ -4,7 +4,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'FareFlip — Spend first, then the trip',
-  description: 'Guide one card’s existing spend so miles are ready before you fly. We do not book seats for you.',
+  description: 'Guide existing card spend so points are ready before you fly. Compares against a current cash fare when available.',
   generator: 'v0.app',
   icons: {
     icon: [

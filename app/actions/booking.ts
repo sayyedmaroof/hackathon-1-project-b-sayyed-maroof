@@ -6,14 +6,11 @@ import { reuseExistingBooking } from '@/lib/booking/idempotency'
 import { computeSaving, offerExpired, priceChangedMessage, pricesEqual } from '@/lib/booking/price'
 import { db } from '@/lib/db'
 import { bookings } from '@/lib/db/schema'
-import { bookCashSchema, markAwardBookedSchema } from '@/lib/auth/schemas'
+import { bookCashSchema } from '@/lib/auth/schemas'
 import { requireVerifiedUser } from '@/lib/auth/session'
 import { assertLiveBookingAllowed, createDuffelOrder, getDuffelOffer } from '@/lib/providers/duffel'
 import { DuffelError, userMessageForDuffel } from '@/lib/providers/duffel-errors'
 import { getDuffelMode } from '@/lib/providers/duffel-client'
-import { planForAwardOffer } from '@/lib/cards/enrich-offers'
-import { resolveSampleAwardOffer } from '@/lib/cards/resolve-award-offer'
-import { loadWalletForUser } from '@/lib/cards/wallet-db'
 import { getOfferSnapshot } from '@/lib/search/offer-snapshot'
 
 export async function bookCashOffer(_prev: unknown, formData: FormData) {
@@ -159,73 +156,6 @@ export async function bookCashOffer(_prev: unknown, formData: FormData) {
   }
 
   redirect(`/bookings/${pendingId}`)
-}
-
-export async function markAwardBooked(_prev: unknown, formData: FormData) {
-  const user = await requireVerifiedUser().catch(() => null)
-  if (!user) redirect(`/login?next=${encodeURIComponent(formData.get('next')?.toString() ?? '/results')}`)
-
-  const passengersRaw = formData.get('passengers')
-  let passengers: unknown[] = [{}]
-  try {
-    passengers = JSON.parse(typeof passengersRaw === 'string' ? passengersRaw : '[{}]')
-  } catch {
-    passengers = [{}]
-  }
-
-  const parsed = markAwardBookedSchema.safeParse({
-    offerKey: formData.get('offerKey'),
-    normalPrice: formData.get('normalPrice'),
-    origin: formData.get('origin'),
-    destination: formData.get('destination'),
-    departDate: formData.get('departDate'),
-    returnDate: formData.get('returnDate'),
-    cabin: formData.get('cabin'),
-    cashPrice: formData.get('cashPrice'),
-    awardPoints: formData.get('awardPoints'),
-    awardFees: formData.get('awardFees'),
-    passengers,
-  })
-  if (!parsed.success) return { error: 'Invalid booking data.' }
-
-  const data = parsed.data
-  const offer = await resolveSampleAwardOffer({
-    offerKey: data.offerKey,
-    origin: data.origin,
-    destination: data.destination,
-    departDate: data.departDate,
-    returnDate: data.returnDate,
-    cabin: data.cabin,
-  })
-  if (!offer) return { error: 'Award offer not found.' }
-
-  const wallet = await loadWalletForUser(user.id)
-  const { pointsPlan } = planForAwardOffer(offer, wallet)
-  const plannerSaving = pointsPlan?.recommended.netSavingEur ?? 0
-
-  const inserted = await db
-    .insert(bookings)
-    .values({
-      userId: user.id,
-      provider: 'award_guide',
-      providerRef: data.offerKey,
-      origin: data.origin,
-      destination: data.destination,
-      departDate: data.departDate,
-      returnDate: data.returnDate,
-      cabin: data.cabin,
-      cashPrice: String(offer.cashPrice),
-      currency: offer.currency ?? 'EUR',
-      dataMode: 'sample',
-      awardPoints: String(offer.points),
-      awardFees: String(offer.fees),
-      savingEur: String(Math.max(0, Math.round(plannerSaving))),
-      status: 'confirmed',
-      passengers: data.passengers,
-    })
-    .returning({ id: bookings.id })
-
-  redirect(`/bookings/${inserted[0]!.id}`)
 }
 
 export async function getUserBookings(userId: string) {

@@ -3,18 +3,24 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
-import { CreditCard, Heart, WalletCards, X } from 'lucide-react'
+import { Bookmark, Map, X } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
 
-const items: { href: string; label: string; icon: ReactNode }[] = [
-  { href: '/', label: 'Spend plan', icon: <CreditCard className="size-4" /> },
-  { href: '/wallet', label: 'Wallet', icon: <WalletCards className="size-4" /> },
-  { href: '/bookings', label: 'Bookings', icon: <Heart className="size-4" /> },
-]
-
-export function AppNavSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AppNavSidebar({
+  open,
+  onClose,
+  loggedIn,
+}: {
+  open: boolean
+  onClose: () => void
+  loggedIn: boolean
+}) {
   const pathname = usePathname()
+  const items: { href: string; label: string; icon: ReactNode }[] = [
+    { href: '/plan', label: 'Plan', icon: <Map className="size-4" /> },
+    ...(loggedIn ? [{ href: '/plans', label: 'Saved plans', icon: <Bookmark className="size-4" /> }] : []),
+  ]
 
   return (
     <aside
@@ -25,7 +31,7 @@ export function AppNavSidebar({ open, onClose }: { open: boolean; onClose: () =>
     >
       <div className="flex items-center justify-between">
         <Logo />
-        <button className="lg:hidden" onClick={onClose} aria-label="Close navigation">
+        <button className="min-h-11 min-w-11 lg:hidden" onClick={onClose} aria-label="Close navigation">
           <X className="size-5" />
         </button>
       </div>
@@ -36,7 +42,7 @@ export function AppNavSidebar({ open, onClose }: { open: boolean; onClose: () =>
             key={href}
             href={href}
             onClick={onClose}
-            className={cn('sidebar-link', pathname === href && 'active')}
+            className={cn('sidebar-link min-h-11', pathname === href && 'active')}
           >
             <span>{icon}</span>
             {label}

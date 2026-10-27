@@ -4,7 +4,6 @@ import { cabinToDuffel } from './cabin-map'
 import { duffelFetch, duffelModeFromToken, getDuffelApiKey, getDuffelMode, liveBookingAllowed } from './duffel-client'
 import { DuffelError } from './duffel-errors'
 import { mapDuffelOffers, type DuffelOffer } from './duffel-map'
-import { searchSampleCash } from './sample-cash'
 import type { DataMode, DuffelMode, FlightOffer, FlightProvider, ProviderSearchQuery } from './types'
 
 type OfferRequestResponse = { data?: { id?: string; offers?: DuffelOffer[] } }
@@ -58,17 +57,27 @@ function dataMode(): DataMode {
   return mode === 'unknown' && !getDuffelApiKey() ? 'sample' : mode
 }
 
-export async function searchDuffelCash(query: ProviderSearchQuery): Promise<FlightOffer[]> {
+export type SearchDuffelCashOptions = {
+  timeoutMs?: number
+  supplierTimeoutMs?: number
+}
+
+export async function searchDuffelCash(
+  query: ProviderSearchQuery,
+  options?: SearchDuffelCashOptions,
+): Promise<FlightOffer[]> {
   if (query.origin === query.destination) return []
+  const supplierTimeoutMs = options?.supplierTimeoutMs ?? 15000
   const created = await duffelFetch<OfferRequestResponse>(
-    '/air/offer_requests?return_offers=false&supplier_timeout=15000',
-    { method: 'POST', body: JSON.stringify(offerRequestBody(query)) },
+    `/air/offer_requests?return_offers=false&supplier_timeout=${supplierTimeoutMs}`,
+    { method: 'POST', body: JSON.stringify(offerRequestBody(query)), timeoutMs: options?.timeoutMs },
   )
   const requestId = created.data?.id
   if (!requestId) return []
 
   const listed = await duffelFetch<OfferListResponse>(
     `/air/offers?offer_request_id=${encodeURIComponent(requestId)}&sort=total_amount&limit=50`,
+    { timeoutMs: options?.timeoutMs },
   )
   return mapDuffelOffers(listed.data ?? [], query, {
     kind: 'cash',
@@ -79,8 +88,6 @@ export async function searchDuffelCash(query: ProviderSearchQuery): Promise<Flig
 
 export async function searchCashOffers(query: ProviderSearchQuery): Promise<FlightOffer[]> {
   if (!getDuffelApiKey()) {
-    if (process.env.NODE_ENV !== 'production') return searchSampleCash(query)
-    console.error('DUFFEL_API_KEY is not set')
     throw new DuffelError({
       status: 0,
       type: 'authentication_error',

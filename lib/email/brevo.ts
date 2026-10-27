@@ -15,10 +15,10 @@ export async function sendVerificationEmail(to: string, verifyUrl: string): Prom
       accept: 'application/json',
     },
     body: JSON.stringify({
-      sender: { email: from, name: 'A Una Milla' },
+      sender: { email: from, name: 'FareFlip' },
       to: [{ email: to }],
       subject: 'Verify your email',
-      htmlContent: `<p>Verify your email to start booking:</p><p><a href="${verifyUrl}">Verify email</a></p>`,
+      htmlContent: `<p>Verify your email to save your plans:</p><p><a href="${verifyUrl}">Verify email</a></p>`,
     }),
   })
   if (!res.ok) {

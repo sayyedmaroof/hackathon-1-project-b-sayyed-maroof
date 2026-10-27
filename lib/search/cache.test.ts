@@ -1,76 +1,54 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import type { FlightOffer, SearchFlightsResult } from '@/lib/providers/types'
-import { clearSearchCache, getCachedSearch, setCachedSearch } from './cache'
-import { clearOfferSnapshots, getOfferSnapshot } from './offer-snapshot'
-import type { ParsedSearchQuery } from './query-schema'
+import {
+  FAILURE_TTL_MS,
+  SUCCESS_TTL_MS,
+  clearSearchCache,
+  getCachedCashBaseline,
+  isCachedFailure,
+  setCachedCashBaseline,
+  setCachedCashBaselineFailure,
+} from './cache'
+import type { CashBaselineCacheKeyInput } from './cache'
 
-const query: ParsedSearchQuery = {
-  origin: 'London (LHR)',
-  destination: 'New York (JFK)',
-  depart: '2027-06-01',
-  returnDate: '2027-06-10',
-  cabin: 'Economy',
-  flexible: false,
-  adults: 1,
-  originCode: 'LHR',
-  destinationCode: 'JFK',
+const base: CashBaselineCacheKeyInput = {
+  origin: 'MAD',
+  destination: 'JFK',
+  cabin: 'Business',
+  journey: 'return',
+  departDate: '2027-06-01',
+  returnDate: '2027-06-08',
+  mode: 'live',
 }
 
-function cashOffer(expiresAt: string): FlightOffer {
-  return {
-    id: 'duffel-off_1',
-    kind: 'cash',
-    source: 'duffel',
-    airline: 'BA',
-    airlineCode: 'BA',
-    origin: 'LHR',
-    destination: 'JFK',
-    departTime: '09:00',
-    arriveTime: '12:00',
-    duration: '7h',
-    stops: 'Nonstop',
-    cabin: 'Economy',
-    cashPrice: 200,
-    points: 0,
-    fees: 0,
-    tone: '',
-    whyThisWorks: '',
-    isSampleAward: false,
-    duffelOfferId: 'off_1',
-    expiresAt,
-    currency: 'EUR',
-    totalAmountRaw: '200.00',
-    dataMode: 'test',
-  }
-}
-
-function result(offer: FlightOffer): SearchFlightsResult {
-  return {
-    normalPrice: 200,
-    best: offer,
-    savings: { amount: 0, pct: 0 },
-    alternatives: [offer],
-    dataMode: 'test',
-    displayCurrency: 'EUR',
-  }
-}
-
-describe('search cache', () => {
+describe('cash baseline cache', () => {
   afterEach(() => {
     clearSearchCache()
-    clearOfferSnapshots()
   })
 
-  it('returns a live cache hit and remembers the offer snapshot', () => {
-    const offer = cashOffer('2099-01-01T00:00:00Z')
-    setCachedSearch(query, result(offer))
-    const hit = getCachedSearch(query)
-    expect(hit?.alternatives).toHaveLength(1)
-    expect(getOfferSnapshot('off_1')?.amount).toBe('200.00')
+  it('hits a success within TTL and misses after TTL', () => {
+    const now = 1_000_000
+    setCachedCashBaseline(base, { eur: 1999, source: 'duffel_live', fetchedAt: '2027-01-01T00:00:00Z' }, now)
+    expect(getCachedCashBaseline(base, now + 1000)?.eur).toBe(1999)
+    expect(getCachedCashBaseline(base, now + SUCCESS_TTL_MS + 1)).toBeUndefined()
   })
 
-  it('evicts expired offers and misses when the baseline cash fare is gone', () => {
-    setCachedSearch(query, result(cashOffer('2000-01-01T00:00:00Z')))
-    expect(getCachedSearch(query)).toBeNull()
+  it('separates keys by date and journey', () => {
+    const now = 1_000_000
+    setCachedCashBaseline(base, { eur: 1999, source: 'duffel_live' }, now)
+    expect(
+      getCachedCashBaseline({ ...base, departDate: '2027-06-02' }, now),
+    ).toBeUndefined()
+    expect(
+      getCachedCashBaseline({ ...base, journey: 'one_way', returnDate: undefined }, now),
+    ).toBeUndefined()
+    expect(getCachedCashBaseline(base, now)?.eur).toBe(1999)
+  })
+
+  it('caches failures for a short TTL', () => {
+    const now = 1_000_000
+    setCachedCashBaselineFailure(base, now)
+    expect(isCachedFailure(base, now + 1000)).toBe(true)
+    expect(getCachedCashBaseline(base, now + 1000)).toBeNull()
+    expect(isCachedFailure(base, now + FAILURE_TTL_MS + 1)).toBe(false)
   })
 })

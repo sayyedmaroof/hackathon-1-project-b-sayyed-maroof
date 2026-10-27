@@ -15,7 +15,7 @@ export default async function SignUpPage({
   if (user) redirect(next)
 
   return (
-    <AuthFormShell title="Create account" subtitle="We’ll email you a verification link. Spend planning on the home page works without an account.">
+    <AuthFormShell title="Create account" subtitle="We’ll email you a verification link so you can save your plans. Spend planning works without an account.">
       <SignUpForm next={rawNext ? next : undefined} />
     </AuthFormShell>
   )

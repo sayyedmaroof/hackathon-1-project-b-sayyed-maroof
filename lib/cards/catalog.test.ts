@@ -32,4 +32,24 @@ describe('cards catalog', () => {
     expect(unverified.some((e) => e.from === 'revolut_revpoints')).toBe(true)
     expect(unverified.some((e) => e.from === 'amex_mr')).toBe(true)
   })
+
+  it('has copy, program, local image path and valid URLs on every card', () => {
+    for (const card of CARD_CATALOG) {
+      expect(card.description_es.length).toBeGreaterThan(20)
+      expect(card.description_en.length).toBeGreaterThan(10)
+      expect(card.programName.length).toBeGreaterThan(2)
+      expect(card.imagePath).toMatch(/^\/cards\/[a-z0-9_]+\.(png|jpg)$/)
+      expect(card.applyUrl).toMatch(/^https:\/\//)
+      expect(() => new URL(card.applyUrl)).not.toThrow()
+      expect(card.sourceUrl).toBe('https://aunamilladetudestino.com/tarjetas-de-credito')
+      expect(() => new URL(card.sourceUrl)).not.toThrow()
+      expect(card.baseEarnPerEur).toBeGreaterThan(0)
+      expect(card.welcomeBonusPoints).toBeGreaterThanOrEqual(0)
+      expect(card.welcomeBonusMinSpend).toBeGreaterThanOrEqual(0)
+      if (card.welcomeBonusPoints > 0) {
+        expect(card.welcomeBonusMinSpend).toBeGreaterThan(0)
+      }
+    }
+  })
 })
+
